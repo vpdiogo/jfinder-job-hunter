@@ -70,3 +70,28 @@ pytest
 - [ ] Google Sheets synchronization
 - [ ] Interview preparation generator
 - [ ] Observability and scheduled execution
+
+## Evaluate a job
+
+Start the API with `uvicorn app.main:app --reload` and submit a job plus a
+career profile:
+
+```bash
+curl -X POST http://127.0.0.1:8000/evaluations \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "job": {
+      "title": "Senior Backend Engineer",
+      "company": "Acme",
+      "url": "https://example.com/jobs/1",
+      "required_skills": ["Python", "FastAPI", "Kubernetes"]
+    },
+    "profile": {
+      "skills": ["Python", "FastAPI"],
+      "target_titles": ["Backend Engineer"]
+    }
+  }'
+```
+
+The response contains the score, recommendation, matched skills, and missing
+requirements.

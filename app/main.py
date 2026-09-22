@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.evaluations import router as evaluations_router
 from app.settings import settings
 
 app = FastAPI(
@@ -7,6 +8,7 @@ app = FastAPI(
     description="Agentic job-hunting system",
     version="0.1.0",
 )
+app.include_router(evaluations_router)
 
 
 @app.get("/health")
