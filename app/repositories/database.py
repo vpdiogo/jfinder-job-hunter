@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session
 
 from app.settings import settings
@@ -22,7 +22,47 @@ def get_engine() -> Engine:
 def create_database() -> None:
     from app.repositories import tables  # noqa: F401
 
-    Base.metadata.create_all(get_engine())
+    engine = get_engine()
+    Base.metadata.create_all(engine)
+    _upgrade_sqlite(engine)
+
+
+def _upgrade_sqlite(engine: Engine) -> None:
+    """Apply additive schema changes for the local SQLite development database."""
+    if not engine.url.drivername.startswith("sqlite"):
+        return
+
+    additions = {
+        "career_profiles": {
+            "desired_seniority": "VARCHAR(50)",
+            "work_modes": "JSON",
+            "locations": "JSON",
+            "timezones": "JSON",
+            "salary_min": "FLOAT",
+            "salary_max": "FLOAT",
+            "languages": "JSON",
+            "required_technologies": "JSON",
+            "desired_technologies": "JSON",
+        },
+        "jobs": {
+            "required_technologies": "JSON",
+            "desired_technologies": "JSON",
+            "seniority": "VARCHAR(50)",
+            "work_mode": "VARCHAR(50)",
+            "location": "VARCHAR(255)",
+            "timezone": "VARCHAR(100)",
+            "salary_min": "FLOAT",
+            "salary_max": "FLOAT",
+            "languages": "JSON",
+        },
+    }
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table, columns in additions.items():
+            existing = {column["name"] for column in inspector.get_columns(table)}
+            for name, definition in columns.items():
+                if name not in existing:
+                    connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {definition}"))
 
 
 def get_session() -> Generator[Session]:

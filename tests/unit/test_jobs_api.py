@@ -91,3 +91,32 @@ def test_lists_evaluations_for_an_imported_job(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()[0]["job_url"] == "https://example.com/jobs/1"
+
+
+def test_persists_enriched_job_fields(client: TestClient) -> None:
+    response = client.post(
+        "/jobs/import",
+        json={
+            "jobs": [
+                {
+                    "title": "Senior Backend Engineer",
+                    "company": "Acme",
+                    "url": "https://example.com/jobs/enriched",
+                    "required_technologies": ["Python"],
+                    "desired_technologies": ["Docker"],
+                    "seniority": "senior",
+                    "work_mode": "remote",
+                    "location": "Brazil",
+                    "timezone": "America/Sao_Paulo",
+                    "salary_min": 120000,
+                    "salary_max": 180000,
+                    "languages": ["English"],
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 201
+    job = response.json()["imported"][0]
+    assert job["required_technologies"] == ["Python"]
+    assert job["work_mode"] == "remote"

@@ -39,7 +39,7 @@ export function getJobEvaluations(jobId: number): Promise<Evaluation[]> {
 
 export function updateProfile(
   profileId: number,
-  data: Pick<Profile, 'skills' | 'target_titles'>,
+  data: Omit<Profile, 'id' | 'created_at'>,
 ): Promise<Profile> {
   return request<Profile>(`/profiles/${profileId}`, {
     method: 'PUT',
@@ -48,7 +48,7 @@ export function updateProfile(
 }
 
 export function createProfile(
-  data: Pick<Profile, 'skills' | 'target_titles'>,
+  data: Omit<Profile, 'id' | 'created_at'>,
 ): Promise<Profile> {
   return request<Profile>('/profiles', {
     method: 'POST',

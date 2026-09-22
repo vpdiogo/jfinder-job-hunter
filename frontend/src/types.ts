@@ -18,6 +18,15 @@ export interface JobQueueItem {
   url: string
   description: string
   required_skills: string[]
+  required_technologies: string[]
+  desired_technologies: string[]
+  seniority: string | null
+  work_mode: string | null
+  location: string | null
+  timezone: string | null
+  salary_min: number | null
+  salary_max: number | null
+  languages: string[]
   created_at: string
   status: JobStatus
   score: number | null
@@ -29,6 +38,15 @@ export interface Profile {
   id: number
   skills: string[]
   target_titles: string[]
+  desired_seniority: string | null
+  work_modes: string[]
+  locations: string[]
+  timezones: string[]
+  salary_min: number | null
+  salary_max: number | null
+  languages: string[]
+  required_technologies: string[]
+  desired_technologies: string[]
   created_at: string
 }
 

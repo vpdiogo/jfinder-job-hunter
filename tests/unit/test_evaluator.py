@@ -84,3 +84,95 @@ def test_keeps_low_information_jobs_for_review() -> None:
 
     assert evaluation.score == 20.0
     assert evaluation.recommendation is Recommendation.REVIEW
+
+
+def test_enriched_matching_uses_job_preferences_and_profile_constraints() -> None:
+    evaluator = JobEvaluator(
+        CareerProfile(
+            skills=["Python", "FastAPI"],
+            target_titles=["Backend Engineer"],
+            desired_seniority="senior",
+            work_modes=["remote"],
+            locations=["Brazil"],
+            timezones=["America/Sao_Paulo"],
+            salary_min=120_000,
+            salary_max=180_000,
+            languages=["English"],
+            desired_technologies=["Docker"],
+        )
+    )
+    job = Job(
+        title="Senior Backend Engineer",
+        company="Acme",
+        url="https://example.com/jobs/enriched",
+        required_technologies=["Python", "FastAPI"],
+        desired_technologies=["Docker"],
+        seniority="Senior",
+        work_mode="Remote",
+        location="Brazil",
+        timezone="America/Sao_Paulo",
+        salary_min=130_000,
+        salary_max=170_000,
+        languages=["English"],
+    )
+
+    evaluation = evaluator.evaluate(job)
+
+    assert evaluation.score == 100.0
+    assert evaluation.recommendation is Recommendation.APPLY
+    assert "Seniority: matched." in evaluation.reasons
+    assert "Salary: range overlaps." in evaluation.reasons
+
+
+def test_enriched_matching_reports_missing_information_without_penalty() -> None:
+    evaluator = JobEvaluator(
+        CareerProfile(
+            skills=["Python"],
+            desired_seniority="senior",
+            work_modes=["remote"],
+        )
+    )
+    job = Job(
+        title="Backend Engineer",
+        company="Acme",
+        url="https://example.com/jobs/incomplete",
+        required_technologies=["Python"],
+    )
+
+    evaluation = evaluator.evaluate(job)
+
+    assert evaluation.score == 100.0
+    assert "Seniority: insufficient information." in evaluation.reasons
+    assert "Work mode: insufficient information." in evaluation.reasons
+
+
+def test_enriched_matching_identifies_incompatible_constraints() -> None:
+    evaluator = JobEvaluator(
+        CareerProfile(
+            skills=["Python"],
+            desired_seniority="senior",
+            work_modes=["remote"],
+            salary_min=150_000,
+            salary_max=180_000,
+            languages=["English"],
+        )
+    )
+    job = Job(
+        title="Backend Engineer",
+        company="Acme",
+        url="https://example.com/jobs/mismatch",
+        required_technologies=["Python", "Kubernetes"],
+        seniority="mid",
+        work_mode="on-site",
+        salary_min=80_000,
+        salary_max=100_000,
+        languages=["Portuguese", "English"],
+    )
+
+    evaluation = evaluator.evaluate(job)
+
+    assert evaluation.recommendation is Recommendation.SKIP
+    assert "Kubernetes" in evaluation.missing_requirements
+    assert "Seniority: no match." in evaluation.reasons
+    assert "Work mode: no match." in evaluation.reasons
+    assert "Salary: range does not overlap." in evaluation.reasons

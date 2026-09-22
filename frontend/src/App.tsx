@@ -60,6 +60,15 @@ function App() {
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null)
   const [skills, setSkills] = useState('')
   const [targetTitles, setTargetTitles] = useState('')
+  const [desiredSeniority, setDesiredSeniority] = useState('')
+  const [workModes, setWorkModes] = useState('')
+  const [locations, setLocations] = useState('')
+  const [timezones, setTimezones] = useState('')
+  const [salaryMin, setSalaryMin] = useState('')
+  const [salaryMax, setSalaryMax] = useState('')
+  const [languages, setLanguages] = useState('')
+  const [requiredTechnologies, setRequiredTechnologies] = useState('')
+  const [desiredTechnologies, setDesiredTechnologies] = useState('')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
@@ -112,6 +121,15 @@ function App() {
     setSelectedProfileId(profile.id)
     setSkills(profile.skills.join(', '))
     setTargetTitles(profile.target_titles.join(', '))
+    setDesiredSeniority(profile.desired_seniority ?? '')
+    setWorkModes(profile.work_modes.join(', '))
+    setLocations(profile.locations.join(', '))
+    setTimezones(profile.timezones.join(', '))
+    setSalaryMin(profile.salary_min?.toString() ?? '')
+    setSalaryMax(profile.salary_max?.toString() ?? '')
+    setLanguages(profile.languages.join(', '))
+    setRequiredTechnologies(profile.required_technologies.join(', '))
+    setDesiredTechnologies(profile.desired_technologies.join(', '))
   }
 
   async function evaluateJob() {
@@ -154,7 +172,19 @@ function App() {
 
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const data = { skills: toList(skills), target_titles: toList(targetTitles) }
+    const data = {
+      skills: toList(skills),
+      target_titles: toList(targetTitles),
+      desired_seniority: desiredSeniority || null,
+      work_modes: toList(workModes),
+      locations: toList(locations),
+      timezones: toList(timezones),
+      salary_min: salaryMin ? Number(salaryMin) : null,
+      salary_max: salaryMax ? Number(salaryMax) : null,
+      languages: toList(languages),
+      required_technologies: toList(requiredTechnologies),
+      desired_technologies: toList(desiredTechnologies),
+    }
     try {
       const profile = selectedProfileId
         ? await updateProfile(selectedProfileId, data)
@@ -213,7 +243,7 @@ function App() {
             </> : <p className="empty">Selecione uma vaga para ver seus detalhes e ações.</p>}
           </aside>
         </section>
-      ) : <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Perfil profissional</p><h2>Base para suas avaliações</h2></div><button className="secondary" onClick={() => { setSelectedProfileId(null); setSkills(''); setTargetTitles('') }}>Novo perfil</button></div><div className="profile-layout"><div className="profile-list">{profiles.map((profile) => <button key={profile.id} className={selectedProfileId === profile.id ? 'selected' : ''} onClick={() => selectProfile(profile)}><strong>Perfil #{profile.id}</strong><small>{profile.target_titles.join(', ') || 'Sem cargos definidos'}</small></button>)}</div><form onSubmit={(event) => void saveProfile(event)}><label>Skills separadas por vírgula<textarea value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, FastAPI, SQLAlchemy" /></label><label>Cargos-alvo separados por vírgula<textarea value={targetTitles} onChange={(event) => setTargetTitles(event.target.value)} placeholder="Backend Engineer, Platform Engineer" /></label><button type="submit">Salvar perfil</button></form></div></section>}
+      ) : <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Perfil profissional</p><h2>Base para suas avaliações</h2></div><button className="secondary" onClick={() => { setSelectedProfileId(null); setSkills(''); setTargetTitles(''); setDesiredSeniority(''); setWorkModes(''); setLocations(''); setTimezones(''); setSalaryMin(''); setSalaryMax(''); setLanguages(''); setRequiredTechnologies(''); setDesiredTechnologies('') }}>Novo perfil</button></div><div className="profile-layout"><div className="profile-list">{profiles.map((profile) => <button key={profile.id} className={selectedProfileId === profile.id ? 'selected' : ''} onClick={() => selectProfile(profile)}><strong>Perfil #{profile.id}</strong><small>{profile.target_titles.join(', ') || 'Sem cargos definidos'}</small></button>)}</div><form onSubmit={(event) => void saveProfile(event)}><label>Skills separadas por vírgula<textarea value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, FastAPI, SQLAlchemy" /></label><label>Cargos-alvo separados por vírgula<textarea value={targetTitles} onChange={(event) => setTargetTitles(event.target.value)} placeholder="Backend Engineer, Platform Engineer" /></label><label>Senioridade desejada<input value={desiredSeniority} onChange={(event) => setDesiredSeniority(event.target.value)} placeholder="Senior" /></label><label>Modalidades aceitas, separadas por vírgula<input value={workModes} onChange={(event) => setWorkModes(event.target.value)} placeholder="remote, hybrid" /></label><label>Localizações aceitas, separadas por vírgula<input value={locations} onChange={(event) => setLocations(event.target.value)} placeholder="Brazil, São Paulo" /></label><label>Fusos aceitos, separados por vírgula<input value={timezones} onChange={(event) => setTimezones(event.target.value)} placeholder="America/Sao_Paulo" /></label><label>Faixa salarial mínima<input type="number" min="0" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)} /></label><label>Faixa salarial máxima<input type="number" min="0" value={salaryMax} onChange={(event) => setSalaryMax(event.target.value)} /></label><label>Idiomas, separados por vírgula<input value={languages} onChange={(event) => setLanguages(event.target.value)} placeholder="English, Portuguese" /></label><label>Tecnologias obrigatórias, separadas por vírgula<textarea value={requiredTechnologies} onChange={(event) => setRequiredTechnologies(event.target.value)} placeholder="Python, FastAPI" /></label><label>Tecnologias desejáveis, separadas por vírgula<textarea value={desiredTechnologies} onChange={(event) => setDesiredTechnologies(event.target.value)} placeholder="Docker, Kubernetes" /></label><button type="submit">Salvar perfil</button></form></div></section>}
     </main>
   )
 }

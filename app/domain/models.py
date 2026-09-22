@@ -11,6 +11,15 @@ class Job:
     url: str
     description: str = ""
     required_skills: list[str] = field(default_factory=list)
+    required_technologies: list[str] = field(default_factory=list)
+    desired_technologies: list[str] = field(default_factory=list)
+    seniority: str | None = None
+    work_mode: str | None = None
+    location: str | None = None
+    timezone: str | None = None
+    salary_min: float | None = None
+    salary_max: float | None = None
+    languages: list[str] = field(default_factory=list)
     discovered_at: datetime | None = None
 
 
@@ -20,6 +29,15 @@ class CareerProfile:
 
     skills: list[str] = field(default_factory=list)
     target_titles: list[str] = field(default_factory=list)
+    desired_seniority: str | None = None
+    work_modes: list[str] = field(default_factory=list)
+    locations: list[str] = field(default_factory=list)
+    timezones: list[str] = field(default_factory=list)
+    salary_min: float | None = None
+    salary_max: float | None = None
+    languages: list[str] = field(default_factory=list)
+    required_technologies: list[str] = field(default_factory=list)
+    desired_technologies: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
