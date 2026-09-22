@@ -139,10 +139,15 @@ function App() {
       return
     }
     try {
-      await evaluateSavedJob(selectedJob.id, selectedProfileId)
+      const evaluation = await evaluateSavedJob(selectedJob.id, selectedProfileId)
       setMessage('Vaga avaliada.')
       await loadQueue()
-      await selectJob({ ...selectedJob, status: 'evaluated' })
+      await selectJob({
+        ...selectedJob,
+        status: 'evaluated',
+        score: evaluation.score,
+        recommendation: evaluation.recommendation,
+      })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível avaliar a vaga.')
     }
