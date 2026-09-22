@@ -1,0 +1,57 @@
+.app-shell { max-width: 1440px; margin: 0 auto; padding: 32px; }
+.topbar, .section-heading, .detail-heading { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
+.topbar { margin-bottom: 28px; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { max-width: 640px; font-size: clamp(2rem, 4vw, 3.4rem); letter-spacing: -0.055em; line-height: 1.02; margin-bottom: 0; }
+h2 { margin-bottom: 4px; font-size: 1.25rem; }
+h3 { margin: 24px 0 10px; font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; color: #62708a; }
+.eyebrow { margin-bottom: 8px; color: #5069d8; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+nav { display: flex; padding: 4px; gap: 4px; border-radius: 10px; background: #e9edf6; }
+nav button, .secondary { border: 0; background: transparent; color: #526078; padding: 9px 12px; border-radius: 7px; font-weight: 700; }
+nav button.active { color: #1d2f8f; background: #fff; box-shadow: 0 2px 8px #25408c1a; }
+.message { padding: 12px 16px; background: #e7f6ec; color: #1f6d40; border-radius: 10px; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, .9fr); gap: 22px; }
+.queue-panel, .detail-panel, .profile-panel { background: #fff; border: 1px solid #e3e8f1; border-radius: 16px; box-shadow: 0 10px 30px #27365d08; }
+.queue-panel, .detail-panel, .profile-panel { padding: 24px; }
+.filters { display: grid; grid-template-columns: 1fr 1fr .7fr; gap: 12px; margin: 22px 0 14px; }
+label { display: grid; gap: 7px; color: #526078; font-size: .8rem; font-weight: 700; }
+select, input, textarea { width: 100%; border: 1px solid #d9e0ec; border-radius: 8px; background: #fff; padding: 10px; color: #172033; }
+textarea { min-height: 94px; resize: vertical; }
+.job-list { display: grid; gap: 8px; }
+.job-row { display: grid; grid-template-columns: minmax(0, 1fr) 70px 104px; align-items: center; gap: 12px; width: 100%; border: 1px solid #e4e9f1; background: #fff; border-radius: 10px; padding: 14px; text-align: left; color: #172033; }
+.job-row:hover, .job-row.selected { border-color: #9fafff; background: #f5f7ff; }
+.job-row span:first-child, .profile-list button { display: grid; gap: 4px; }
+.job-row small, .profile-list small { color: #70809a; }
+.score { font-size: 1.2rem; font-weight: 800; color: #3349b6; text-align: right; }
+.status { justify-self: end; padding: 5px 8px; border-radius: 999px; background: #edf0f6; color: #56647a; font-size: .75rem; font-weight: 800; text-transform: capitalize; }
+.status.evaluated, .status.interested { background: #e4efff; color: #2860a9; }
+.status.applied, .status.recruiter, .status.technical, .status.final { background: #ede9ff; color: #6544ad; }
+.status.offer { background: #e4f7ea; color: #21804a; }
+.status.rejected { background: #fae8e8; color: #a13d3d; }
+.detail-panel { min-height: 520px; }
+.detail-heading a { color: #3349b6; font-weight: 700; text-decoration: none; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 22px 0; }
+.metrics div { padding: 12px; border-radius: 10px; background: #f5f7fb; display: grid; gap: 5px; }
+.metrics small { color: #71809a; }
+.metrics strong { text-transform: capitalize; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chips span { padding: 6px 9px; border-radius: 7px; background: #eef1f7; color: #43516b; font-size: .8rem; font-weight: 700; }
+ul { padding-left: 18px; color: #4c5971; line-height: 1.5; }
+.warning { color: #9b5a10; background: #fff4df; padding: 10px; border-radius: 8px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+.actions label { flex: 1; }
+button:not(nav button):not(.job-row):not(.profile-list button) { border: 0; border-radius: 8px; background: #3349b6; color: #fff; padding: 10px 14px; font-weight: 800; }
+button.secondary { background: #eff2fa; color: #405070; }
+.empty { color: #73819a; padding: 36px 0; text-align: center; }
+.profile-panel { max-width: 920px; }
+.profile-layout { display: grid; grid-template-columns: .75fr 1.25fr; gap: 24px; margin-top: 24px; }
+.profile-list { display: grid; gap: 8px; align-content: start; }
+.profile-list button { border: 1px solid #e1e7f1; border-radius: 9px; padding: 12px; background: #fff; color: #24314a; text-align: left; }
+.profile-list button.selected { border-color: #9fafff; background: #f5f7ff; }
+form { display: grid; gap: 16px; }
+@media (max-width: 900px) { .app-shell { padding: 20px; } .topbar, .section-heading, .detail-heading { flex-direction: column; } .workspace, .profile-layout { grid-template-columns: 1fr; } .filters { grid-template-columns: 1fr; } .detail-panel { min-height: auto; } }
+@media (max-width: 540px) { .app-shell { padding: 14px; } .queue-panel, .detail-panel, .profile-panel { padding: 16px; } .job-row { grid-template-columns: 1fr auto; } .job-row .status { grid-column: 1 / -1; justify-self: start; } .score { grid-column: 2; grid-row: 1; } .metrics { grid-template-columns: 1fr; } }
+.evaluation-history { display: grid; gap: 8px; }
+.evaluation-history div { display: grid; gap: 3px; padding: 10px; border-left: 3px solid #aab7f7; background: #f6f8fc; color: #526078; font-size: .85rem; }
+.evaluation-history strong { color: #273c9d; text-transform: capitalize; }
+.evaluation-history small { color: #77859c; }

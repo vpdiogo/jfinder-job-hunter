@@ -245,3 +245,32 @@ def _queue_response(
         recommendation=evaluation.recommendation if evaluation else None,
         applied_at=application.applied_at if application else None,
     )
+
+@router.get(
+    "/{job_id}/evaluations",
+    response_model=list[StoredEvaluationResponse],
+)
+def list_job_evaluations(
+    job_id: int,
+    session: SessionDependency,
+) -> list[StoredEvaluationResponse]:
+    job = _get_job_or_404(session, job_id)
+    records = session.scalars(
+        select(EvaluationRecord)
+        .where(EvaluationRecord.job_id == job.id)
+        .order_by(EvaluationRecord.id.desc())
+    ).all()
+    return [
+        StoredEvaluationResponse(
+            id=record.id,
+            profile_id=record.profile_id,
+            job_url=job.url,
+            score=record.score,
+            recommendation=record.recommendation,
+            reasons=record.reasons,
+            missing_requirements=record.missing_requirements,
+            matched_skills=record.matched_skills,
+            evaluated_at=record.evaluated_at,
+        )
+        for record in records
+    ]

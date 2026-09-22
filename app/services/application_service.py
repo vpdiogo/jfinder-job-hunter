@@ -12,7 +12,7 @@ class InvalidStatusTransition(ValueError):
 
 
 ALLOWED_TRANSITIONS: dict[JobStatus, set[JobStatus]] = {
-    JobStatus.DISCOVERED: {JobStatus.EVALUATED},
+    JobStatus.DISCOVERED: set(),
     JobStatus.EVALUATED: {JobStatus.INTERESTED},
     JobStatus.INTERESTED: {JobStatus.APPLIED},
     JobStatus.APPLIED: {JobStatus.RECRUITER, JobStatus.REJECTED},

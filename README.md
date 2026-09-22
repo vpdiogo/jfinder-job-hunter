@@ -189,3 +189,17 @@ curl -X POST http://127.0.0.1:8000/jobs/1/status \
 Transitions are validated. For example, a job must be evaluated before it can
 be marked as interesting, and it must be interesting before it can be applied
 to.
+
+## Browser UI
+
+The web interface lives in `frontend/` and uses React, TypeScript, and Vite.
+Run the API and UI in separate terminals:
+
+```bash
+uvicorn app.main:app --reload
+npm --prefix frontend run dev
+```
+
+Open `http://localhost:5173`. The default API address is
+`http://127.0.0.1:8000`; copy `frontend/.env.example` to `frontend/.env` and
+set `VITE_API_URL` if your API runs elsewhere.

@@ -74,3 +74,20 @@ def test_rejects_empty_job_import(client: TestClient) -> None:
     response = client.post("/jobs/import", json={"jobs": []})
 
     assert response.status_code == 422
+
+
+def test_lists_evaluations_for_an_imported_job(client: TestClient) -> None:
+    job = client.post("/jobs/import", json=jobs_payload()).json()["imported"][0]
+    profile = client.post(
+        "/profiles",
+        json={
+            "skills": ["Python", "FastAPI"],
+            "target_titles": ["Backend Engineer"],
+        },
+    ).json()
+    client.post(f"/jobs/{job['id']}/evaluate", json={"profile_id": profile["id"]})
+
+    response = client.get(f"/jobs/{job['id']}/evaluations")
+
+    assert response.status_code == 200
+    assert response.json()[0]["job_url"] == "https://example.com/jobs/1"
