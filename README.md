@@ -60,7 +60,7 @@ pytest
 ## Roadmap
 
 - [x] Repository and architecture scaffold
-- [ ] Job source collector interface
+- [x] JSON job importer
 - [x] Deterministic job evaluation pipeline
 - [x] SQLite persistence
 - [ ] CV/profile ingestion
@@ -136,3 +136,32 @@ curl -X POST http://127.0.0.1:8000/evaluations \
 Profiles can be retrieved with `GET /profiles/{id}` and updated with
 `PUT /profiles/{id}`. An evaluation accepts either `profile_id` or an inline
 `profile`, but not both.
+
+## Import jobs
+
+Import one or more jobs as JSON. Repeated URLs are skipped to avoid duplicate
+records:
+
+```bash
+curl -X POST http://127.0.0.1:8000/jobs/import \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jobs": [
+      {
+        "title": "Backend Engineer",
+        "company": "Acme",
+        "url": "https://example.com/jobs/1",
+        "required_skills": ["Python", "FastAPI"]
+      }
+    ]
+  }'
+```
+
+List imported jobs with `GET /jobs`. To evaluate an imported job with a saved
+profile, use:
+
+```bash
+curl -X POST http://127.0.0.1:8000/jobs/1/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{"profile_id": 1}'
+```

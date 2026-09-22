@@ -13,6 +13,24 @@ class JobInput(BaseModel):
     required_skills: list[str] = Field(default_factory=list)
 
 
+class JobResponse(JobInput):
+    id: int
+    created_at: datetime
+
+
+class JobImportRequest(BaseModel):
+    jobs: list[JobInput] = Field(min_length=1)
+
+
+class JobImportResponse(BaseModel):
+    imported: list[JobResponse]
+    skipped_urls: list[str]
+
+
+class JobEvaluationRequest(BaseModel):
+    profile_id: int = Field(ge=1)
+
+
 class CareerProfileInput(BaseModel):
     skills: list[str] = Field(default_factory=list)
     target_titles: list[str] = Field(default_factory=list)

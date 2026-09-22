@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.evaluations import router as evaluations_router
+from app.api.jobs import router as jobs_router
 from app.api.profiles import router as profiles_router
 from app.settings import settings
 
@@ -10,6 +11,7 @@ app = FastAPI(
     version="0.1.0",
 )
 app.include_router(evaluations_router)
+app.include_router(jobs_router)
 app.include_router(profiles_router)
 
 
