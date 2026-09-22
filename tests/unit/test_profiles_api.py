@@ -100,3 +100,22 @@ def test_allows_clearing_an_enriched_profile_field(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["desired_seniority"] is None
+
+
+def test_rejects_partial_update_that_invalidates_salary_range(client: TestClient) -> None:
+    profile = client.post(
+        "/profiles",
+        json={
+            **profile_payload(),
+            "salary_min": 100000,
+            "salary_max": 180000,
+        },
+    ).json()
+
+    response = client.put(
+        f"/profiles/{profile['id']}",
+        json={"salary_min": 200000},
+    )
+
+    assert response.status_code == 422
+    assert client.get(f"/profiles/{profile['id']}").json()["salary_min"] == 100000

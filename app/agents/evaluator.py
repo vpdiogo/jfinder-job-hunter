@@ -12,7 +12,9 @@ class JobEvaluator:
         if not self._has_enriched_criteria(job):
             return self._evaluate_legacy(job)
 
-        requirements = self._unique(job.required_skills + job.required_technologies)
+        requirements = self._unique(
+            self._requirements_for(job) + job.required_technologies
+        )
         available_technologies = self._unique(
             self.profile.skills
             + self.profile.required_technologies

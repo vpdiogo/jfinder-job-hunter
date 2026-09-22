@@ -55,6 +55,22 @@ def update_profile(
     session: SessionDependency,
 ) -> CareerProfileResponse:
     record = _get_profile_or_404(session, profile_id)
+    salary_min = (
+        updates.salary_min
+        if "salary_min" in updates.model_fields_set
+        else record.salary_min
+    )
+    salary_max = (
+        updates.salary_max
+        if "salary_max" in updates.model_fields_set
+        else record.salary_max
+    )
+    if salary_min is not None and salary_max is not None and salary_min > salary_max:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="salary_min cannot be greater than salary_max.",
+        )
+
     for field in updates.model_fields_set:
         setattr(record, field, getattr(updates, field))
 

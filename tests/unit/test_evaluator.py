@@ -176,3 +176,25 @@ def test_enriched_matching_identifies_incompatible_constraints() -> None:
     assert "Seniority: no match." in evaluation.reasons
     assert "Work mode: no match." in evaluation.reasons
     assert "Salary: range does not overlap." in evaluation.reasons
+
+
+def test_enriched_matching_keeps_description_skill_fallback() -> None:
+    evaluator = JobEvaluator(
+        CareerProfile(
+            skills=["Python"],
+            target_titles=["Backend Engineer"],
+            work_modes=["remote"],
+        )
+    )
+    job = Job(
+        title="Backend Engineer",
+        company="Acme",
+        url="https://example.com/jobs/description-enriched",
+        description="Build APIs and services with Python.",
+    )
+
+    evaluation = evaluator.evaluate(job)
+
+    assert evaluation.score == 100.0
+    assert evaluation.matched_skills == ["Python"]
+    assert "Required technologies: 1/1 matched." in evaluation.reasons
