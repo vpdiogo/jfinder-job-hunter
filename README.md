@@ -67,7 +67,7 @@ pytest
 - [ ] Tailored application material generation
 - [ ] Human approval workflow
 - [x] Application tracking
-- [ ] Google Sheets synchronization
+- [ ] Browser UI for job management
 - [ ] Interview preparation generator
 - [ ] Observability and scheduled execution
 
