@@ -219,3 +219,6 @@ __marimo__/
 
 # JFinder local SQLite database
 jfinder.db
+
+# Frontend environment
+frontend/.env

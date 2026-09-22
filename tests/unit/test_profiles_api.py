@@ -45,3 +45,12 @@ def test_rejects_profile_update_without_changes(client: TestClient) -> None:
     response = client.put("/profiles/1", json={})
 
     assert response.status_code == 422
+
+
+def test_lists_profiles(client: TestClient) -> None:
+    client.post("/profiles", json=profile_payload())
+
+    response = client.get("/profiles")
+
+    assert response.status_code == 200
+    assert response.json()[0]["skills"] == ["Python", "FastAPI"]

@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
@@ -32,6 +33,14 @@ def create_profile(
     session.commit()
     session.refresh(record)
     return _response(record)
+
+
+@router.get("", response_model=list[CareerProfileResponse])
+def list_profiles(session: SessionDependency) -> list[CareerProfileResponse]:
+    records = session.scalars(
+        select(CareerProfileRecord).order_by(CareerProfileRecord.id.desc())
+    ).all()
+    return [_response(record) for record in records]
 
 
 @router.get("/{profile_id}", response_model=CareerProfileResponse)
