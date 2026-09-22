@@ -62,7 +62,7 @@ pytest
 - [x] Repository and architecture scaffold
 - [ ] Job source collector interface
 - [x] Deterministic job evaluation pipeline
-- [ ] SQLite persistence
+- [x] SQLite persistence
 - [ ] CV/profile ingestion
 - [ ] Tailored application material generation
 - [ ] Human approval workflow
@@ -95,3 +95,11 @@ curl -X POST http://127.0.0.1:8000/evaluations \
 
 The response contains the score, recommendation, matched skills, and missing
 requirements.
+
+Evaluations are persisted in `jfinder.db` and can be retrieved with:
+
+```bash
+curl http://127.0.0.1:8000/evaluations
+curl 'http://127.0.0.1:8000/evaluations?recommendation=review&min_score=70'
+curl http://127.0.0.1:8000/evaluations/1
+```

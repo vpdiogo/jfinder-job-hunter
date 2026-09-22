@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from app.domain.enums import Recommendation
@@ -28,3 +30,8 @@ class EvaluationResponse(BaseModel):
     reasons: list[str]
     missing_requirements: list[str]
     matched_skills: list[str]
+
+
+class StoredEvaluationResponse(EvaluationResponse):
+    id: int
+    evaluated_at: datetime

@@ -1,14 +1,36 @@
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.agents.evaluator import JobEvaluator
-from app.api.schemas import EvaluationRequest, EvaluationResponse
+from app.api.schemas import (
+    EvaluationRequest,
+    StoredEvaluationResponse,
+)
+from app.domain.enums import Recommendation
 from app.domain.models import CareerProfile, Job
+from app.repositories.database import get_session
+from app.repositories.tables import (
+    CareerProfileRecord,
+    EvaluationRecord,
+    JobRecord,
+)
 
 router = APIRouter(tags=["evaluations"])
+SessionDependency = Annotated[Session, Depends(get_session)]
 
 
-@router.post("/evaluations", response_model=EvaluationResponse)
-def evaluate_job(request: EvaluationRequest) -> EvaluationResponse:
+@router.post(
+    "/evaluations",
+    response_model=StoredEvaluationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def evaluate_job(
+    request: EvaluationRequest,
+    session: SessionDependency,
+) -> StoredEvaluationResponse:
     profile = CareerProfile(
         skills=request.profile.skills,
         target_titles=request.profile.target_titles,
@@ -22,11 +44,85 @@ def evaluate_job(request: EvaluationRequest) -> EvaluationResponse:
     )
     evaluation = JobEvaluator(profile).evaluate(job)
 
-    return EvaluationResponse(
-        job_url=evaluation.job_url,
+    profile_record = CareerProfileRecord(
+        skills=profile.skills,
+        target_titles=profile.target_titles,
+    )
+    job_record = JobRecord(
+        title=job.title,
+        company=job.company,
+        url=job.url,
+        description=job.description,
+        required_skills=job.required_skills,
+    )
+    session.add_all([profile_record, job_record])
+    session.flush()
+
+    record = EvaluationRecord(
+        job_id=job_record.id,
+        profile_id=profile_record.id,
         score=evaluation.score,
         recommendation=evaluation.recommendation,
         reasons=evaluation.reasons,
         missing_requirements=evaluation.missing_requirements,
         matched_skills=evaluation.matched_skills,
+    )
+    session.add(record)
+    session.commit()
+    session.refresh(record)
+
+    return _response(record, job_record.url)
+
+
+@router.get("/evaluations", response_model=list[StoredEvaluationResponse])
+def list_evaluations(
+    session: SessionDependency,
+    recommendation: Recommendation | None = None,
+    min_score: float | None = Query(default=None, ge=0, le=100),
+) -> list[StoredEvaluationResponse]:
+    statement = select(EvaluationRecord, JobRecord.url).join(
+        JobRecord,
+        EvaluationRecord.job_id == JobRecord.id,
+    )
+    if recommendation is not None:
+        statement = statement.where(
+            EvaluationRecord.recommendation == recommendation
+        )
+    if min_score is not None:
+        statement = statement.where(EvaluationRecord.score >= min_score)
+
+    rows = session.execute(statement.order_by(EvaluationRecord.id.desc())).all()
+    return [_response(record, job_url) for record, job_url in rows]
+
+
+@router.get("/evaluations/{evaluation_id}", response_model=StoredEvaluationResponse)
+def get_evaluation(
+    evaluation_id: int,
+    session: SessionDependency,
+) -> StoredEvaluationResponse:
+    row = session.execute(
+        select(EvaluationRecord, JobRecord.url)
+        .join(JobRecord, EvaluationRecord.job_id == JobRecord.id)
+        .where(EvaluationRecord.id == evaluation_id)
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Evaluation not found.")
+
+    record, job_url = row
+    return _response(record, job_url)
+
+
+def _response(
+    record: EvaluationRecord,
+    job_url: str,
+) -> StoredEvaluationResponse:
+    return StoredEvaluationResponse(
+        id=record.id,
+        job_url=job_url,
+        score=record.score,
+        recommendation=record.recommendation,
+        reasons=record.reasons,
+        missing_requirements=record.missing_requirements,
+        matched_skills=record.matched_skills,
+        evaluated_at=record.evaluated_at,
     )
