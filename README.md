@@ -66,7 +66,7 @@ pytest
 - [ ] CV/profile ingestion
 - [ ] Tailored application material generation
 - [ ] Human approval workflow
-- [ ] Application tracking
+- [x] Application tracking
 - [ ] Google Sheets synchronization
 - [ ] Interview preparation generator
 - [ ] Observability and scheduled execution
@@ -165,3 +165,27 @@ curl -X POST http://127.0.0.1:8000/jobs/1/evaluate \
   -H 'Content-Type: application/json' \
   -d '{"profile_id": 1}'
 ```
+
+## Job queue and application status
+
+Imported jobs begin as `discovered`; evaluating them moves them to `evaluated`.
+Use the queue to prioritize jobs by their latest score:
+
+```bash
+curl http://127.0.0.1:8000/jobs/queue
+curl 'http://127.0.0.1:8000/jobs/queue?status=evaluated&min_score=70'
+```
+
+Move a suitable job through the application process:
+
+```bash
+curl -X POST http://127.0.0.1:8000/jobs/1/interest
+curl -X POST http://127.0.0.1:8000/jobs/1/apply
+curl -X POST http://127.0.0.1:8000/jobs/1/status \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "recruiter"}'
+```
+
+Transitions are validated. For example, a job must be evaluated before it can
+be marked as interesting, and it must be interesting before it can be applied
+to.

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.domain.enums import Recommendation
+from app.domain.enums import JobStatus, Recommendation
 
 
 class JobInput(BaseModel):
@@ -29,6 +29,24 @@ class JobImportResponse(BaseModel):
 
 class JobEvaluationRequest(BaseModel):
     profile_id: int = Field(ge=1)
+
+
+class JobStatusUpdateRequest(BaseModel):
+    status: JobStatus
+
+
+class JobStatusResponse(BaseModel):
+    job_id: int
+    status: JobStatus
+    applied_at: datetime | None
+    updated_at: datetime
+
+
+class JobQueueResponse(JobResponse):
+    status: JobStatus
+    score: float | None
+    recommendation: Recommendation | None
+    applied_at: datetime | None
 
 
 class CareerProfileInput(BaseModel):

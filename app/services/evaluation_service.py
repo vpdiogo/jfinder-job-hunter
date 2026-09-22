@@ -7,6 +7,7 @@ from app.repositories.tables import (
     EvaluationRecord,
     JobRecord,
 )
+from app.services.application_service import mark_evaluated
 
 
 def evaluate_and_store(
@@ -36,4 +37,5 @@ def evaluate_and_store(
         matched_skills=evaluation.matched_skills,
     )
     session.add(record)
+    mark_evaluated(session, job_record.id)
     return record

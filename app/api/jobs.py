@@ -1,25 +1,37 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
     JobEvaluationRequest,
     JobImportRequest,
     JobImportResponse,
+    JobQueueResponse,
     JobResponse,
+    JobStatusResponse,
+    JobStatusUpdateRequest,
     StoredEvaluationResponse,
 )
+from app.domain.enums import JobStatus, Recommendation
 from app.repositories.database import get_session
 from app.repositories.tables import (
+    ApplicationRecord,
     CareerProfileRecord,
+    EvaluationRecord,
     JobRecord,
+)
+from app.services.application_service import (
+    InvalidStatusTransition,
+    get_or_create_application,
+    transition_application,
 )
 from app.services.evaluation_service import evaluate_and_store
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 SessionDependency = Annotated[Session, Depends(get_session)]
+StatusFilter = Annotated[JobStatus | None, Query(alias="status")]
 
 
 @router.post(
@@ -55,6 +67,9 @@ def import_jobs(
         imported.append(record)
         seen_urls.add(job.url)
 
+    session.flush()
+    for record in imported:
+        get_or_create_application(session, record.id)
     session.commit()
     for record in imported:
         session.refresh(record)
@@ -69,6 +84,46 @@ def import_jobs(
 def list_jobs(session: SessionDependency) -> list[JobResponse]:
     jobs = session.scalars(select(JobRecord).order_by(JobRecord.id.desc())).all()
     return [_job_response(job) for job in jobs]
+
+
+@router.get("/queue", response_model=list[JobQueueResponse])
+def list_job_queue(
+    session: SessionDependency,
+    job_status: StatusFilter = None,
+    recommendation: Recommendation | None = None,
+    min_score: float | None = Query(default=None, ge=0, le=100),
+) -> list[JobQueueResponse]:
+    latest_evaluation_id = (
+        select(EvaluationRecord.id)
+        .where(EvaluationRecord.job_id == JobRecord.id)
+        .order_by(EvaluationRecord.id.desc())
+        .limit(1)
+        .correlate(JobRecord)
+        .scalar_subquery()
+    )
+    queue_status = case(
+        (ApplicationRecord.status.is_not(None), ApplicationRecord.status),
+        (EvaluationRecord.id.is_not(None), JobStatus.EVALUATED),
+        else_=JobStatus.DISCOVERED,
+    )
+    statement = (
+        select(JobRecord, ApplicationRecord, EvaluationRecord)
+        .outerjoin(ApplicationRecord, ApplicationRecord.job_id == JobRecord.id)
+        .outerjoin(EvaluationRecord, EvaluationRecord.id == latest_evaluation_id)
+    )
+    if job_status is not None:
+        statement = statement.where(
+            queue_status == job_status
+        )
+    if recommendation is not None:
+        statement = statement.where(EvaluationRecord.recommendation == recommendation)
+    if min_score is not None:
+        statement = statement.where(EvaluationRecord.score >= min_score)
+
+    rows = session.execute(
+        statement.order_by(EvaluationRecord.score.desc(), JobRecord.id.desc())
+    ).all()
+    return [_queue_response(job, application, evaluation) for job, application, evaluation in rows]
 
 
 @router.post(
@@ -102,9 +157,55 @@ def evaluate_saved_job(
     )
 
 
+@router.post("/{job_id}/interest", response_model=JobStatusResponse)
+def mark_job_interesting(
+    job_id: int,
+    session: SessionDependency,
+) -> JobStatusResponse:
+    return _transition_response(session, job_id, JobStatus.INTERESTED)
+
+
+@router.post("/{job_id}/apply", response_model=JobStatusResponse)
+def mark_job_applied(
+    job_id: int,
+    session: SessionDependency,
+) -> JobStatusResponse:
+    return _transition_response(session, job_id, JobStatus.APPLIED)
+
+
+@router.post("/{job_id}/status", response_model=JobStatusResponse)
+def update_job_status(
+    job_id: int,
+    request: JobStatusUpdateRequest,
+    session: SessionDependency,
+) -> JobStatusResponse:
+    return _transition_response(session, job_id, request.status)
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(job_id: int, session: SessionDependency) -> JobResponse:
     return _job_response(_get_job_or_404(session, job_id))
+
+
+def _transition_response(
+    session: Session,
+    job_id: int,
+    target_status: JobStatus,
+) -> JobStatusResponse:
+    _get_job_or_404(session, job_id)
+    try:
+        application = transition_application(session, job_id, target_status)
+    except InvalidStatusTransition as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+    session.commit()
+    session.refresh(application)
+    return JobStatusResponse(
+        job_id=job_id,
+        status=application.status,
+        applied_at=application.applied_at,
+        updated_at=application.updated_at,
+    )
 
 
 def _get_job_or_404(session: Session, job_id: int) -> JobRecord:
@@ -123,4 +224,24 @@ def _job_response(record: JobRecord) -> JobResponse:
         description=record.description,
         required_skills=record.required_skills,
         created_at=record.created_at,
+    )
+
+
+def _queue_response(
+    job: JobRecord,
+    application: ApplicationRecord | None,
+    evaluation: EvaluationRecord | None,
+) -> JobQueueResponse:
+    return JobQueueResponse(
+        **_job_response(job).model_dump(),
+        status=(
+            application.status
+            if application
+            else JobStatus.EVALUATED
+            if evaluation
+            else JobStatus.DISCOVERED
+        ),
+        score=evaluation.score if evaluation else None,
+        recommendation=evaluation.recommendation if evaluation else None,
+        applied_at=application.applied_at if application else None,
     )
