@@ -5,10 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents.evaluator import JobEvaluator
-from app.api.schemas import (
-    EvaluationRequest,
-    StoredEvaluationResponse,
-)
+from app.api.schemas import EvaluationRequest, StoredEvaluationResponse
 from app.domain.enums import Recommendation
 from app.domain.models import CareerProfile, Job
 from app.repositories.database import get_session
@@ -31,10 +28,7 @@ def evaluate_job(
     request: EvaluationRequest,
     session: SessionDependency,
 ) -> StoredEvaluationResponse:
-    profile = CareerProfile(
-        skills=request.profile.skills,
-        target_titles=request.profile.target_titles,
-    )
+    profile_record, profile = _profile_for_evaluation(session, request)
     job = Job(
         title=request.job.title,
         company=request.job.company,
@@ -44,10 +38,6 @@ def evaluate_job(
     )
     evaluation = JobEvaluator(profile).evaluate(job)
 
-    profile_record = CareerProfileRecord(
-        skills=profile.skills,
-        target_titles=profile.target_titles,
-    )
     job_record = JobRecord(
         title=job.title,
         company=job.company,
@@ -55,7 +45,7 @@ def evaluate_job(
         description=job.description,
         required_skills=job.required_skills,
     )
-    session.add_all([profile_record, job_record])
+    session.add(job_record)
     session.flush()
 
     record = EvaluationRecord(
@@ -112,12 +102,37 @@ def get_evaluation(
     return _response(record, job_url)
 
 
+def _profile_for_evaluation(
+    session: Session,
+    request: EvaluationRequest,
+) -> tuple[CareerProfileRecord, CareerProfile]:
+    if request.profile_id is not None:
+        profile_record = session.get(CareerProfileRecord, request.profile_id)
+        if profile_record is None:
+            raise HTTPException(status_code=404, detail="Profile not found.")
+    else:
+        assert request.profile is not None
+        profile_record = CareerProfileRecord(
+            skills=request.profile.skills,
+            target_titles=request.profile.target_titles,
+        )
+        session.add(profile_record)
+        session.flush()
+
+    profile = CareerProfile(
+        skills=profile_record.skills,
+        target_titles=profile_record.target_titles,
+    )
+    return profile_record, profile
+
+
 def _response(
     record: EvaluationRecord,
     job_url: str,
 ) -> StoredEvaluationResponse:
     return StoredEvaluationResponse(
         id=record.id,
+        profile_id=record.profile_id,
         job_url=job_url,
         score=record.score,
         recommendation=record.recommendation,

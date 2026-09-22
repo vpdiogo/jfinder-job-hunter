@@ -103,3 +103,36 @@ curl http://127.0.0.1:8000/evaluations
 curl 'http://127.0.0.1:8000/evaluations?recommendation=review&min_score=70'
 curl http://127.0.0.1:8000/evaluations/1
 ```
+
+## Profiles
+
+Create a profile once and reuse its `id` when evaluating jobs:
+
+```bash
+curl -X POST http://127.0.0.1:8000/profiles \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "skills": ["Python", "FastAPI", "SQLAlchemy"],
+    "target_titles": ["Backend Engineer", "Platform Engineer"]
+  }'
+```
+
+Use the returned `id` in a job evaluation:
+
+```bash
+curl -X POST http://127.0.0.1:8000/evaluations \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "job": {
+      "title": "Senior Backend Engineer",
+      "company": "Acme",
+      "url": "https://example.com/jobs/2",
+      "required_skills": ["Python", "FastAPI"]
+    },
+    "profile_id": 1
+  }'
+```
+
+Profiles can be retrieved with `GET /profiles/{id}` and updated with
+`PUT /profiles/{id}`. An evaluation accepts either `profile_id` or an inline
+`profile`, but not both.

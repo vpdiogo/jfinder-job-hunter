@@ -1,16 +1,4 @@
-import pytest
 from fastapi.testclient import TestClient
-
-from app.main import app
-from app.settings import settings
-
-
-@pytest.fixture
-def client(tmp_path, monkeypatch) -> TestClient:
-    database_path = tmp_path / "jfinder-test.db"
-    monkeypatch.setattr(settings, "database_url", f"sqlite:///{database_path}")
-    with TestClient(app) as test_client:
-        yield test_client
 
 
 def evaluation_payload() -> dict[str, object]:
@@ -34,10 +22,29 @@ def test_evaluates_and_persists_job(client: TestClient) -> None:
     assert response.status_code == 201
     body = response.json()
     assert body["id"] == 1
+    assert body["profile_id"] == 1
     assert body["score"] == 73.33
     assert body["recommendation"] == "review"
     assert body["missing_requirements"] == ["Kubernetes"]
     assert body["evaluated_at"]
+
+
+def test_evaluates_with_existing_profile(client: TestClient) -> None:
+    profile = client.post(
+        "/profiles",
+        json={
+            "skills": ["Python", "FastAPI"],
+            "target_titles": ["Backend Engineer"],
+        },
+    ).json()
+    payload = evaluation_payload()
+    payload.pop("profile")
+    payload["profile_id"] = profile["id"]
+
+    response = client.post("/evaluations", json=payload)
+
+    assert response.status_code == 201
+    assert response.json()["profile_id"] == profile["id"]
 
 
 def test_lists_and_filters_evaluations(client: TestClient) -> None:
@@ -67,7 +74,10 @@ def test_returns_not_found_for_unknown_evaluation(client: TestClient) -> None:
     assert response.status_code == 404
 
 
-def test_rejects_incomplete_evaluation_request(client: TestClient) -> None:
-    response = client.post("/evaluations", json={"job": {}})
+def test_rejects_request_without_a_profile_source(client: TestClient) -> None:
+    payload = evaluation_payload()
+    payload.pop("profile")
+
+    response = client.post("/evaluations", json=payload)
 
     assert response.status_code == 422

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.domain.enums import Recommendation
 
@@ -18,9 +18,32 @@ class CareerProfileInput(BaseModel):
     target_titles: list[str] = Field(default_factory=list)
 
 
+class CareerProfileUpdate(BaseModel):
+    skills: list[str] | None = None
+    target_titles: list[str] | None = None
+
+    @model_validator(mode="after")
+    def requires_a_change(self) -> "CareerProfileUpdate":
+        if self.skills is None and self.target_titles is None:
+            raise ValueError("Provide skills or target_titles to update the profile.")
+        return self
+
+
+class CareerProfileResponse(CareerProfileInput):
+    id: int
+    created_at: datetime
+
+
 class EvaluationRequest(BaseModel):
     job: JobInput
-    profile: CareerProfileInput
+    profile_id: int | None = Field(default=None, ge=1)
+    profile: CareerProfileInput | None = None
+
+    @model_validator(mode="after")
+    def requires_exactly_one_profile_source(self) -> "EvaluationRequest":
+        if (self.profile_id is None) == (self.profile is None):
+            raise ValueError("Provide exactly one of profile_id or profile.")
+        return self
 
 
 class EvaluationResponse(BaseModel):
@@ -34,4 +57,5 @@ class EvaluationResponse(BaseModel):
 
 class StoredEvaluationResponse(EvaluationResponse):
     id: int
+    profile_id: int
     evaluated_at: datetime
