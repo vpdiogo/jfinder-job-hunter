@@ -109,6 +109,34 @@ class CareerProfileResponse(CareerProfileInput):
     created_at: datetime
 
 
+class ResumeExtractionRequest(BaseModel):
+    content: str = Field(min_length=20, max_length=100_000)
+
+
+class ResumeDraftResponse(BaseModel):
+    skills: list[str] = Field(default_factory=list)
+    target_titles: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    experiences: list[str] = Field(default_factory=list)
+    education: list[str] = Field(default_factory=list)
+
+
+class ResumeExtractionResponse(BaseModel):
+    id: int
+    source_content: str
+    draft: ResumeDraftResponse
+    confirmed_profile_id: int | None
+    confirmed_at: datetime | None
+    created_at: datetime
+
+
+class ResumeExtractionConfirmationRequest(BaseModel):
+    profile: CareerProfileInput
+    profile_id: int | None = Field(default=None, ge=1)
+    experiences: list[str] = Field(default_factory=list)
+    education: list[str] = Field(default_factory=list)
+
+
 class EvaluationRequest(BaseModel):
     job: JobInput
     profile_id: int | None = Field(default=None, ge=1)

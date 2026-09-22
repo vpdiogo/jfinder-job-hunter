@@ -28,6 +28,20 @@ class CareerProfileRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class ResumeExtractionRecord(Base):
+    __tablename__ = "resume_extractions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_content: Mapped[str] = mapped_column(String)
+    extracted_data: Mapped[dict[str, object]] = mapped_column(JSON)
+    confirmed_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    profile_id: Mapped[int | None] = mapped_column(
+        ForeignKey("career_profiles.id"), nullable=True
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class JobRecord(Base):
     __tablename__ = "jobs"
 

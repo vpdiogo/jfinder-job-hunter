@@ -61,3 +61,20 @@ export interface Evaluation {
   matched_skills: string[]
   evaluated_at: string
 }
+
+export interface ResumeDraft {
+  skills: string[]
+  target_titles: string[]
+  languages: string[]
+  experiences: string[]
+  education: string[]
+}
+
+export interface ResumeExtraction {
+  id: number
+  source_content: string
+  draft: ResumeDraft
+  confirmed_profile_id: number | null
+  confirmed_at: string | null
+  created_at: string
+}
