@@ -11,6 +11,21 @@ class JobInput(BaseModel):
     url: str = Field(min_length=1)
     description: str = ""
     required_skills: list[str] = Field(default_factory=list)
+    required_technologies: list[str] = Field(default_factory=list)
+    desired_technologies: list[str] = Field(default_factory=list)
+    seniority: str | None = None
+    work_mode: str | None = None
+    location: str | None = None
+    timezone: str | None = None
+    salary_min: float | None = Field(default=None, ge=0)
+    salary_max: float | None = Field(default=None, ge=0)
+    languages: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validates_salary_range(self) -> "JobInput":
+        if self.salary_min is not None and self.salary_max is not None and self.salary_min > self.salary_max:
+            raise ValueError("salary_min cannot be greater than salary_max.")
+        return self
 
 
 class JobResponse(JobInput):
@@ -52,16 +67,40 @@ class JobQueueResponse(JobResponse):
 class CareerProfileInput(BaseModel):
     skills: list[str] = Field(default_factory=list)
     target_titles: list[str] = Field(default_factory=list)
+    desired_seniority: str | None = None
+    work_modes: list[str] = Field(default_factory=list)
+    locations: list[str] = Field(default_factory=list)
+    timezones: list[str] = Field(default_factory=list)
+    salary_min: float | None = Field(default=None, ge=0)
+    salary_max: float | None = Field(default=None, ge=0)
+    languages: list[str] = Field(default_factory=list)
+    required_technologies: list[str] = Field(default_factory=list)
+    desired_technologies: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validates_salary_range(self) -> "CareerProfileInput":
+        if self.salary_min is not None and self.salary_max is not None and self.salary_min > self.salary_max:
+            raise ValueError("salary_min cannot be greater than salary_max.")
+        return self
 
 
 class CareerProfileUpdate(BaseModel):
     skills: list[str] | None = None
     target_titles: list[str] | None = None
+    desired_seniority: str | None = None
+    work_modes: list[str] | None = None
+    locations: list[str] | None = None
+    timezones: list[str] | None = None
+    salary_min: float | None = Field(default=None, ge=0)
+    salary_max: float | None = Field(default=None, ge=0)
+    languages: list[str] | None = None
+    required_technologies: list[str] | None = None
+    desired_technologies: list[str] | None = None
 
     @model_validator(mode="after")
     def requires_a_change(self) -> "CareerProfileUpdate":
-        if self.skills is None and self.target_titles is None:
-            raise ValueError("Provide skills or target_titles to update the profile.")
+        if not self.model_fields_set:
+            raise ValueError("Provide at least one field to update the profile.")
         return self
 
 

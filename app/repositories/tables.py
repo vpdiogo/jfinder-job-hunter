@@ -16,6 +16,15 @@ class CareerProfileRecord(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     skills: Mapped[list[str]] = mapped_column(JSON)
     target_titles: Mapped[list[str]] = mapped_column(JSON)
+    desired_seniority: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    work_modes: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    locations: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    timezones: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    salary_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    salary_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    languages: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    required_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    desired_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
@@ -28,6 +37,15 @@ class JobRecord(Base):
     url: Mapped[str] = mapped_column(String(2048))
     description: Mapped[str] = mapped_column(String, default="")
     required_skills: Mapped[list[str]] = mapped_column(JSON)
+    required_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    desired_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    seniority: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    work_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    timezone: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    salary_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    salary_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    languages: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

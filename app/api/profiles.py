@@ -25,10 +25,7 @@ def create_profile(
     profile: CareerProfileInput,
     session: SessionDependency,
 ) -> CareerProfileResponse:
-    record = CareerProfileRecord(
-        skills=profile.skills,
-        target_titles=profile.target_titles,
-    )
+    record = CareerProfileRecord(**profile.model_dump())
     session.add(record)
     session.commit()
     session.refresh(record)
@@ -58,10 +55,24 @@ def update_profile(
     session: SessionDependency,
 ) -> CareerProfileResponse:
     record = _get_profile_or_404(session, profile_id)
-    if updates.skills is not None:
-        record.skills = updates.skills
-    if updates.target_titles is not None:
-        record.target_titles = updates.target_titles
+    salary_min = (
+        updates.salary_min
+        if "salary_min" in updates.model_fields_set
+        else record.salary_min
+    )
+    salary_max = (
+        updates.salary_max
+        if "salary_max" in updates.model_fields_set
+        else record.salary_max
+    )
+    if salary_min is not None and salary_max is not None and salary_min > salary_max:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="salary_min cannot be greater than salary_max.",
+        )
+
+    for field in updates.model_fields_set:
+        setattr(record, field, getattr(updates, field))
 
     session.commit()
     session.refresh(record)
@@ -83,5 +94,14 @@ def _response(record: CareerProfileRecord) -> CareerProfileResponse:
         id=record.id,
         skills=record.skills,
         target_titles=record.target_titles,
+        desired_seniority=record.desired_seniority,
+        work_modes=record.work_modes or [],
+        locations=record.locations or [],
+        timezones=record.timezones or [],
+        salary_min=record.salary_min,
+        salary_max=record.salary_max,
+        languages=record.languages or [],
+        required_technologies=record.required_technologies or [],
+        desired_technologies=record.desired_technologies or [],
         created_at=record.created_at,
     )

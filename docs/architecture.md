@@ -31,3 +31,14 @@ skills, adds a bonus for target-title matches, and returns a score,
 recommendation, matched skills, and missing requirements. If the posting lacks
 reliable skill requirements, it remains in `review` rather than being
 automatically discarded or recommended.
+
+## Enriched matching
+
+When a job or profile provides the data, the evaluator also considers required
+and desired technologies, seniority, work mode, location or timezone, salary
+range, and languages. Each evaluated criterion is returned as a reason. A
+criterion supplied by only one side is reported as insufficient information and
+is excluded from the score rather than treated as a mismatch.
+
+Existing jobs and profiles remain compatible: when none of the enriched fields
+are available, the original skill-and-title scoring rules are used unchanged.

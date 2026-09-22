@@ -54,3 +54,68 @@ def test_lists_profiles(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()[0]["skills"] == ["Python", "FastAPI"]
+
+
+def test_persists_enriched_profile_fields(client: TestClient) -> None:
+    response = client.post(
+        "/profiles",
+        json={
+            **profile_payload(),
+            "desired_seniority": "senior",
+            "work_modes": ["remote"],
+            "locations": ["Brazil"],
+            "timezones": ["America/Sao_Paulo"],
+            "salary_min": 120000,
+            "salary_max": 180000,
+            "languages": ["English"],
+            "required_technologies": ["Python"],
+            "desired_technologies": ["Docker"],
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["work_modes"] == ["remote"]
+    assert response.json()["salary_max"] == 180000
+
+
+def test_rejects_invalid_profile_salary_range(client: TestClient) -> None:
+    response = client.post(
+        "/profiles",
+        json={"salary_min": 200000, "salary_max": 100000},
+    )
+
+    assert response.status_code == 422
+
+
+def test_allows_clearing_an_enriched_profile_field(client: TestClient) -> None:
+    profile = client.post(
+        "/profiles",
+        json={**profile_payload(), "desired_seniority": "senior"},
+    ).json()
+
+    response = client.put(
+        f"/profiles/{profile['id']}",
+        json={"desired_seniority": None},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["desired_seniority"] is None
+
+
+def test_rejects_partial_update_that_invalidates_salary_range(client: TestClient) -> None:
+    profile = client.post(
+        "/profiles",
+        json={
+            **profile_payload(),
+            "salary_min": 100000,
+            "salary_max": 180000,
+        },
+    ).json()
+
+    response = client.put(
+        f"/profiles/{profile['id']}",
+        json={"salary_min": 200000},
+    )
+
+    assert response.status_code == 422
+    assert client.get(f"/profiles/{profile['id']}").json()["salary_min"] == 100000

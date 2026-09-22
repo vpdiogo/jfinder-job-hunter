@@ -56,13 +56,7 @@ def import_jobs(
             skipped_urls.append(job.url)
             continue
 
-        record = JobRecord(
-            title=job.title,
-            company=job.company,
-            url=job.url,
-            description=job.description,
-            required_skills=job.required_skills,
-        )
+        record = JobRecord(**job.model_dump())
         session.add(record)
         imported.append(record)
         seen_urls.add(job.url)
@@ -223,6 +217,15 @@ def _job_response(record: JobRecord) -> JobResponse:
         url=record.url,
         description=record.description,
         required_skills=record.required_skills,
+        required_technologies=record.required_technologies or [],
+        desired_technologies=record.desired_technologies or [],
+        seniority=record.seniority,
+        work_mode=record.work_mode,
+        location=record.location,
+        timezone=record.timezone,
+        salary_min=record.salary_min,
+        salary_max=record.salary_max,
+        languages=record.languages or [],
         created_at=record.created_at,
     )
 
