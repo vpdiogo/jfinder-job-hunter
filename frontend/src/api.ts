@@ -56,6 +56,13 @@ export function createProfile(
   })
 }
 
+export function evaluateSavedJob(jobId: number, profileId: number): Promise<Evaluation> {
+  return request<Evaluation>(`/jobs/${jobId}/evaluate`, {
+    method: 'POST',
+    body: JSON.stringify({ profile_id: profileId }),
+  })
+}
+
 export function moveJob(jobId: number, action: 'interest' | 'apply'): Promise<void> {
   return request<void>(`/jobs/${jobId}/${action}`, { method: 'POST' })
 }

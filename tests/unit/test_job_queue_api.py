@@ -100,3 +100,14 @@ def test_rejects_invalid_status_transition(client: TestClient) -> None:
     )
 
     assert response.status_code == 409
+
+
+def test_rejects_marking_job_evaluated_without_evaluation(client: TestClient) -> None:
+    job_id = create_job(client)
+
+    response = client.post(
+        f"/jobs/{job_id}/status",
+        json={"status": "evaluated"},
+    )
+
+    assert response.status_code == 409

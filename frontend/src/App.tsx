@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   createProfile,
   getJobEvaluations,
+  evaluateSavedJob,
   getProfiles,
   getQueue,
   moveJob,
@@ -25,7 +26,7 @@ const statuses: JobStatus[] = [
 ]
 
 const nextStatuses: Record<JobStatus, JobStatus[]> = {
-  discovered: ['evaluated'],
+  discovered: [],
   evaluated: ['interested'],
   interested: ['applied'],
   applied: ['recruiter', 'rejected'],
@@ -113,6 +114,22 @@ function App() {
     setTargetTitles(profile.target_titles.join(', '))
   }
 
+  async function evaluateJob() {
+    if (!selectedJob) return
+    if (selectedProfileId === null) {
+      setMessage('Selecione ou crie um perfil antes de avaliar a vaga.')
+      return
+    }
+    try {
+      await evaluateSavedJob(selectedJob.id, selectedProfileId)
+      setMessage('Vaga avaliada.')
+      await loadQueue()
+      await selectJob({ ...selectedJob, status: 'evaluated' })
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível avaliar a vaga.')
+    }
+  }
+
   async function changeStatus(action: 'interest' | 'apply' | JobStatus) {
     if (!selectedJob) return
     try {
@@ -190,8 +207,9 @@ function App() {
               <div className="detail-heading"><div><p className="eyebrow">Detalhe da vaga</p><h2>{selectedJob.title}</h2><p>{selectedJob.company}</p></div><a href={selectedJob.url} target="_blank">Abrir vaga ↗</a></div>
               <div className="metrics"><div><small>Score</small><strong>{selectedJob.score ?? '—'}</strong></div><div><small>Status</small><strong>{formatStatus(selectedJob.status)}</strong></div><div><small>Recomendação</small><strong>{selectedJob.recommendation ?? '—'}</strong></div></div>
               <h3>Requisitos</h3><div className="chips">{selectedJob.required_skills.length > 0 ? selectedJob.required_skills.map((skill) => <span key={skill}>{skill}</span>) : <span>Não informado</span>}</div>
-              {latestEvaluation && <><h3>Avaliação mais recente</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
-              <div className="actions">{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}</div>
+              {latestEvaluation && <><h3>Última avaliação</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
+              {evaluations.length > 0 && <><h3>Histórico de avaliações</h3><div className="evaluation-history">{evaluations.map((evaluation) => <div key={evaluation.id}><strong>{evaluation.score} · {evaluation.recommendation}</strong><small>{new Date(evaluation.evaluated_at).toLocaleString()}</small><span>{evaluation.matched_skills.join(', ') || 'Sem skills identificadas'}</span></div>)}</div></>}
+              <div className="actions">{selectedJob.status === 'discovered' && <button onClick={() => void evaluateJob()}>Avaliar vaga</button>}{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}</div>
             </> : <p className="empty">Selecione uma vaga para ver seus detalhes e ações.</p>}
           </aside>
         </section>
