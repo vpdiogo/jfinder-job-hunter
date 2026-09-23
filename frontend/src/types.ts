@@ -91,3 +91,11 @@ export interface JobDescriptionExtraction {
   work_mode: string | null
   languages: string[]
 }
+
+export interface JobNote {
+  id: number
+  job_id: number
+  content: string
+  created_at: string
+  updated_at: string
+}

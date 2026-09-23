@@ -58,3 +58,9 @@ form { display: grid; gap: 16px; }
 .resume-import, .resume-draft { display: grid; gap: 10px; }
 .resume-import { margin: 20px 0; padding: 16px; border: 1px solid #d7def0; border-radius: 10px; background: #f8faff; }
 .resume-draft { padding: 12px; background: #edf1ff; color: #405070; font-size: .9rem; }
+.dossier-summary { display: grid; gap: 7px; padding: 12px; border-radius: 10px; background: #f5f7fb; color: #4c5971; font-size: .88rem; }
+.note-form { gap: 10px; }
+.note-form .actions { margin-top: 0; }
+.note-list { display: grid; gap: 8px; margin-top: 10px; }
+.note-list button { display: grid; gap: 5px; text-align: left; background: #f6f8fc; color: #43516b; border-left: 3px solid #aab7f7; }
+.note-list small { color: #77859c; }

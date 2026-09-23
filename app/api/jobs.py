@@ -10,6 +10,8 @@ from app.api.schemas import (
     JobEvaluationRequest,
     JobImportRequest,
     JobImportResponse,
+    JobNoteInput,
+    JobNoteResponse,
     JobQueueResponse,
     JobResponse,
     JobStatusResponse,
@@ -23,6 +25,7 @@ from app.repositories.tables import (
     ApplicationRecord,
     CareerProfileRecord,
     EvaluationRecord,
+    JobNoteRecord,
     JobRecord,
 )
 from app.services.application_service import (
@@ -228,6 +231,55 @@ def get_job(job_id: int, session: SessionDependency) -> JobResponse:
     return _job_response(_get_job_or_404(session, job_id))
 
 
+@router.get("/{job_id}/notes", response_model=list[JobNoteResponse])
+def list_job_notes(
+    job_id: int,
+    session: SessionDependency,
+) -> list[JobNoteResponse]:
+    _get_job_or_404(session, job_id)
+    notes = session.scalars(
+        select(JobNoteRecord)
+        .where(JobNoteRecord.job_id == job_id)
+        .order_by(JobNoteRecord.updated_at.desc(), JobNoteRecord.id.desc())
+    ).all()
+    return [_note_response(note) for note in notes]
+
+
+@router.post(
+    "/{job_id}/notes",
+    response_model=JobNoteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_job_note(
+    job_id: int,
+    request: JobNoteInput,
+    session: SessionDependency,
+) -> JobNoteResponse:
+    _get_job_or_404(session, job_id)
+    note = JobNoteRecord(job_id=job_id, content=request.content)
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return _note_response(note)
+
+
+@router.put("/{job_id}/notes/{note_id}", response_model=JobNoteResponse)
+def update_job_note(
+    job_id: int,
+    note_id: int,
+    request: JobNoteInput,
+    session: SessionDependency,
+) -> JobNoteResponse:
+    _get_job_or_404(session, job_id)
+    note = session.get(JobNoteRecord, note_id)
+    if note is None or note.job_id != job_id:
+        raise HTTPException(status_code=404, detail="Job note not found.")
+    note.content = request.content
+    session.commit()
+    session.refresh(note)
+    return _note_response(note)
+
+
 def _transition_response(
     session: Session,
     job_id: int,
@@ -254,6 +306,16 @@ def _get_job_or_404(session: Session, job_id: int) -> JobRecord:
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found.")
     return job
+
+
+def _note_response(record: JobNoteRecord) -> JobNoteResponse:
+    return JobNoteResponse(
+        id=record.id,
+        job_id=record.job_id,
+        content=record.content,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
 
 
 def _job_response(record: JobRecord) -> JobResponse:
