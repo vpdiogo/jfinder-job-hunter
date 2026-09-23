@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
@@ -19,7 +19,7 @@ SessionDependency = Annotated[Session, Depends(get_session)]
 
 @router.get("", response_model=ProfessionalBaseResponse)
 def get_professional_base(session: SessionDependency) -> ProfessionalBaseResponse:
-    record = session.scalar(select(ProfessionalBaseRecord).order_by(ProfessionalBaseRecord.id))
+    record = session.get(ProfessionalBaseRecord, 1)
     if record is None:
         raise HTTPException(status_code=404, detail="Professional base not found.")
     return _base_response(record)
@@ -30,14 +30,23 @@ def save_professional_base(
     payload: ProfessionalBaseInput,
     session: SessionDependency,
 ) -> ProfessionalBaseResponse:
-    record = session.scalar(select(ProfessionalBaseRecord).order_by(ProfessionalBaseRecord.id))
+    record = session.get(ProfessionalBaseRecord, 1)
     if record is None:
-        record = ProfessionalBaseRecord(**payload.model_dump())
+        record = ProfessionalBaseRecord(id=1, **payload.model_dump())
         session.add(record)
     else:
         for field, value in payload.model_dump().items():
             setattr(record, field, value)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        record = session.get(ProfessionalBaseRecord, 1)
+        if record is None:
+            raise
+        for field, value in payload.model_dump().items():
+            setattr(record, field, value)
+        session.commit()
     session.refresh(record)
     return _base_response(record)
 
@@ -51,7 +60,7 @@ def create_application_profile_from_base(
     payload: ApplicationProfileFromBaseRequest,
     session: SessionDependency,
 ) -> CareerProfileResponse:
-    base = session.scalar(select(ProfessionalBaseRecord).order_by(ProfessionalBaseRecord.id))
+    base = session.get(ProfessionalBaseRecord, 1)
     if base is None:
         raise HTTPException(status_code=409, detail="Create a professional base first.")
     record = CareerProfileRecord(

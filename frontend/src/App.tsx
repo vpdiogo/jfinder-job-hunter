@@ -4,7 +4,6 @@ import {
   createApplicationProfileFromBase,
   createJobNote,
   createManualJob,
-  createProfile,
   extractJobDescription,
   extractResume,
   getJobEvaluations,
@@ -19,7 +18,7 @@ import {
   saveProfessionalBase,
   updateProfile,
 } from './api'
-import type { Evaluation, JobNote, JobQueueItem, JobStatus, ProfessionalBase, Profile } from './types'
+import type { Evaluation, JobNote, JobQueueItem, JobStatus, Profile } from './types'
 import './App.css'
 
 const statuses: JobStatus[] = [
@@ -65,7 +64,7 @@ function App() {
   const [tab, setTab] = useState<'queue' | 'profile' | 'new-job' | 'base'>('queue')
   const [jobs, setJobs] = useState<JobQueueItem[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
-  const [professionalBase, setProfessionalBase] = useState<ProfessionalBase | null>(null)
+  const [professionalBaseState, setProfessionalBaseState] = useState<"loading" | "ready" | "missing" | "error">("loading")
   const [baseResume, setBaseResume] = useState("" )
   const [baseLinks, setBaseLinks] = useState("")
   const [baseSkills, setBaseSkills] = useState("")
@@ -145,14 +144,16 @@ function App() {
     const timer = window.setTimeout(() => {
       void loadProfiles()
       void getProfessionalBase().then((base) => {
-        setProfessionalBase(base)
+        setProfessionalBaseState("ready")
         setBaseResume(base.resume_content)
         setBaseLinks(base.links.join(", "))
         setBaseSkills(base.skills.join(", "))
         setBaseExperiences(base.experiences.join("\n"))
         setBaseEducation(base.education.join("\n"))
         setBaseLanguages(base.languages.join(", "))
-      }).catch(() => undefined)
+      }).catch((error: unknown) => {
+        setProfessionalBaseState(error instanceof Error && error.message === "Professional base not found." ? "missing" : "error")
+      })
     }, 0)
     return () => window.clearTimeout(timer)
   }, [loadProfiles])
@@ -258,12 +259,18 @@ function App() {
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = profileData()
+    if (selectedProfileId === null && professionalBaseState !== "ready") {
+      setMessage(
+        professionalBaseState === "loading"
+          ? "Aguarde o carregamento da base profissional."
+          : "Crie uma Base profissional antes de criar um perfil de candidatura.",
+      )
+      return
+    }
     try {
       const profile = selectedProfileId
         ? await updateProfile(selectedProfileId, data)
-        : professionalBase
-        ? await createApplicationProfileFromBase(data)
-        : await createProfile(data)
+        : await createApplicationProfileFromBase(data)
       await loadProfiles()
       selectProfile(profile)
       setMessage('Perfil salvo.')
@@ -288,12 +295,11 @@ function App() {
   async function saveProfessionalBaseForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     try {
-      const base = await saveProfessionalBase({
+      await saveProfessionalBase({
         resume_content: baseResume, links: toList(baseLinks), skills: toList(baseSkills),
         experiences: toLines(baseExperiences), education: toLines(baseEducation),
         languages: toList(baseLanguages),
       })
-      setProfessionalBase(base)
       setMessage("Base profissional salva.")
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível salvar a base profissional.")

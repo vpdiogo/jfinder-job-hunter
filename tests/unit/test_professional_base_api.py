@@ -14,6 +14,7 @@ def test_saves_base_and_creates_a_profile_snapshot(client: TestClient) -> None:
         },
     )
     assert base.status_code == 200
+    assert base.json()["id"] == 1
     assert client.get("/professional-base").json()["skills"] == ["Python", "FastAPI"]
 
     profile = client.post(
