@@ -102,3 +102,34 @@ def test_confirms_reviewed_resume_data_into_an_existing_profile(client: TestClie
     assert response.status_code == 201
     assert response.json()["id"] == profile["id"]
     assert response.json()["skills"] == ["Python"]
+
+
+def test_confirmation_preserves_unreviewed_existing_profile_fields(
+    client: TestClient,
+) -> None:
+    profile = client.post(
+        "/profiles",
+        json={
+            "name": "DevOps Engineer — Cloud",
+            "skills": ["Terraform"],
+            "languages": ["Portuguese"],
+            "work_modes": ["remote"],
+        },
+    ).json()
+    extraction = client.post(
+        "/profiles/resume-extractions",
+        json={"content": RESUME_TEXT},
+    ).json()
+
+    response = client.post(
+        f"/profiles/resume-extractions/{extraction['id']}/confirm",
+        json={
+            "profile_id": profile["id"],
+            "profile": {"skills": ["Python"]},
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["skills"] == ["Python"]
+    assert response.json()["languages"] == ["Portuguese"]
+    assert response.json()["work_modes"] == ["remote"]

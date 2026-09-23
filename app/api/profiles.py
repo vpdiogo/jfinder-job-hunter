@@ -108,7 +108,24 @@ def confirm_resume_extraction(
             profile.name = f"Perfil {profile.id}"
     else:
         profile = _get_profile_or_404(session, request.profile_id)
-        for field, value in request.profile.model_dump().items():
+        fields_to_update = request.profile.model_fields_set
+        salary_min = (
+            request.profile.salary_min
+            if "salary_min" in fields_to_update
+            else profile.salary_min
+        )
+        salary_max = (
+            request.profile.salary_max
+            if "salary_max" in fields_to_update
+            else profile.salary_max
+        )
+        if salary_min is not None and salary_max is not None and salary_min > salary_max:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="salary_min cannot be greater than salary_max.",
+            )
+        for field in fields_to_update:
+            value = getattr(request.profile, field)
             if field != "name" or value is not None:
                 setattr(profile, field, value)
 
