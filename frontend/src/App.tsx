@@ -57,7 +57,12 @@ function toLines(value: string): string[] {
 }
 
 function formatStatus(status: string): string {
-  return status.replaceAll('_', ' ')
+  const labels: Record<string, string> = { discovered: "Descoberta", evaluated: "Avaliada", interested: "Interessante", applied: "Candidatura", recruiter: "Recrutador", technical: "Técnica", final: "Final", offer: "Oferta", rejected: "Recusada" }
+  return labels[status] ?? status.replaceAll("_", " ")
+}
+
+function formatRecommendation(recommendation: string): string {
+  return { apply: "Aplicar", review: "Revisar", skip: "Pular" }[recommendation] ?? recommendation
 }
 
 function App() {
@@ -139,6 +144,12 @@ function App() {
     }, 0)
     return () => window.clearTimeout(timer)
   }, [loadQueue])
+
+  useEffect(() => {
+    if (!message) return
+    const timer = window.setTimeout(() => setMessage(""), 4500)
+    return () => window.clearTimeout(timer)
+  }, [message])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -434,12 +445,12 @@ function App() {
           <aside className="detail-panel" aria-live="polite">
             {selectedJob ? <>
               <div className="detail-heading"><div><p className="eyebrow">Detalhe da vaga</p><h2>{selectedJob.title}</h2><p>{selectedJob.company}</p></div><a href={selectedJob.url} target="_blank">Abrir vaga ↗</a></div>
-              <div className="metrics"><div><small>Score</small><strong>{selectedJob.score ?? '—'}</strong></div><div><small>Status</small><strong>{formatStatus(selectedJob.status)}</strong></div><div><small>Recomendação</small><strong>{selectedJob.recommendation ?? '—'}</strong></div></div><h3>Dossiê de estudo</h3><div className="dossier-summary"><span><strong>Perfil em foco:</strong> {focusProfile?.name ?? "Não informado"}</span><span><strong>Senioridade:</strong> {selectedJob.seniority ?? "Não informada"}</span><span><strong>Modalidade:</strong> {selectedJob.work_mode ?? "Não informada"}</span>{selectedJob.languages.length > 0 && <span><strong>Idiomas:</strong> {selectedJob.languages.join(", ")}</span>}</div>
+              <div className="metrics"><div><small>Score</small><strong>{selectedJob.score ?? '—'}</strong></div><div><small>Status</small><strong>{formatStatus(selectedJob.status)}</strong></div><div><small>Recomendação</small><strong>{selectedJob.recommendation ? formatRecommendation(selectedJob.recommendation) : '—'}</strong></div></div><h3>Dossiê de estudo</h3><div className="dossier-summary"><span><strong>Perfil em foco:</strong> {focusProfile?.name ?? "Não informado"}</span><span><strong>Senioridade:</strong> {selectedJob.seniority ?? "Não informada"}</span><span><strong>Modalidade:</strong> {selectedJob.work_mode ?? "Não informada"}</span>{selectedJob.languages.length > 0 && <span><strong>Idiomas:</strong> {selectedJob.languages.join(", ")}</span>}</div>
               <h3>Requisitos</h3><div className="chips">{[...selectedJob.required_skills, ...selectedJob.required_technologies].length > 0 ? [...selectedJob.required_skills, ...selectedJob.required_technologies].map((skill) => <span key={skill}>{skill}</span>) : <span>Não informado</span>}</div>{selectedJob.responsibilities.length > 0 && <><h3>Responsabilidades</h3><ul>{selectedJob.responsibilities.map((item) => <li key={item}>{item}</li>)}</ul></>}
               {selectedJob.desired_technologies.length > 0 && <><h3>Tecnologias desejáveis</h3><div className="chips">{selectedJob.desired_technologies.map((technology) => <span key={technology}>{technology}</span>)}</div></>}
               {latestEvaluation && <><h3>Última avaliação</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
               <h3>Anotações</h3><form className="note-form" onSubmit={(event) => void saveJobNote(event)}><textarea value={noteContent} onChange={(event) => setNoteContent(event.target.value)} placeholder="Registre observações, perguntas e próximos passos" /><div className="actions"><button type="submit">{editingNoteId ? "Salvar alteração" : "Adicionar anotação"}</button>{editingNoteId && <button type="button" className="secondary" onClick={() => { setEditingNoteId(null); setNoteContent("") }}>Cancelar</button>}</div></form>{notes.length > 0 && <div className="note-list">{notes.map((note) => <button key={note.id} type="button" onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content) }}><span>{note.content}</span><small>Atualizada em {new Date(note.updated_at).toLocaleString()}</small></button>)}</div>}
-              {evaluations.length > 0 && <><h3>Histórico de avaliações</h3><div className="evaluation-history">{evaluations.map((evaluation) => <div key={evaluation.id}><strong>{evaluation.score} · {evaluation.recommendation}</strong><small>{new Date(evaluation.evaluated_at).toLocaleString()}</small><span>{evaluation.matched_skills.join(', ') || 'Sem skills identificadas'}</span></div>)}</div></>}
+              {evaluations.length > 0 && <><h3>Histórico de avaliações</h3><div className="evaluation-history">{evaluations.map((evaluation) => <div key={evaluation.id}><strong>{evaluation.score} · {formatRecommendation(evaluation.recommendation)}</strong><small>{new Date(evaluation.evaluated_at).toLocaleString()}</small><span>{evaluation.matched_skills.join(', ') || 'Sem skills identificadas'}</span></div>)}</div></>}
               <div className="actions">{selectedJob.status === 'discovered' && <button onClick={() => void evaluateJob()}>Avaliar vaga</button>}{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}</div>
             </> : <p className="empty">Selecione uma vaga para ver seus detalhes e ações.</p>}
           </aside>
