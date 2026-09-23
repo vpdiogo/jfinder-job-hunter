@@ -65,6 +65,7 @@ class JobQueueResponse(JobResponse):
 
 
 class CareerProfileInput(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     skills: list[str] = Field(default_factory=list)
     target_titles: list[str] = Field(default_factory=list)
     desired_seniority: str | None = None
@@ -85,6 +86,7 @@ class CareerProfileInput(BaseModel):
 
 
 class CareerProfileUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     skills: list[str] | None = None
     target_titles: list[str] | None = None
     desired_seniority: str | None = None
@@ -105,6 +107,7 @@ class CareerProfileUpdate(BaseModel):
 
 
 class CareerProfileResponse(CareerProfileInput):
+    name: str
     id: int
     created_at: datetime
 

@@ -36,6 +36,9 @@ def create_profile(
 ) -> CareerProfileResponse:
     record = CareerProfileRecord(**profile.model_dump())
     session.add(record)
+    session.flush()
+    if record.name is None:
+        record.name = f"Perfil {record.id}"
     session.commit()
     session.refresh(record)
     return _profile_response(record)
@@ -101,10 +104,13 @@ def confirm_resume_extraction(
         profile = CareerProfileRecord(**request.profile.model_dump())
         session.add(profile)
         session.flush()
+        if profile.name is None:
+            profile.name = f"Perfil {profile.id}"
     else:
         profile = _get_profile_or_404(session, request.profile_id)
         for field, value in request.profile.model_dump().items():
-            setattr(profile, field, value)
+            if field != "name" or value is not None:
+                setattr(profile, field, value)
 
     extraction.profile_id = profile.id
     extraction.confirmed_data = {
@@ -143,6 +149,11 @@ def update_profile(
         if "salary_max" in updates.model_fields_set
         else record.salary_max
     )
+    if "name" in updates.model_fields_set and updates.name is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Profile name cannot be empty.",
+        )
     if salary_min is not None and salary_max is not None and salary_min > salary_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -180,6 +191,7 @@ def _get_extraction_or_404(
 def _profile_response(record: CareerProfileRecord) -> CareerProfileResponse:
     return CareerProfileResponse(
         id=record.id,
+        name=record.name or f"Perfil {record.id}",
         skills=record.skills,
         target_titles=record.target_titles,
         desired_seniority=record.desired_seniority,

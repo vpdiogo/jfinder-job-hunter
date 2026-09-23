@@ -14,6 +14,7 @@ class CareerProfileRecord(Base):
     __tablename__ = "career_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     skills: Mapped[list[str]] = mapped_column(JSON)
     target_titles: Mapped[list[str]] = mapped_column(JSON)
     desired_seniority: Mapped[str | None] = mapped_column(String(50), nullable=True)

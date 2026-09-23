@@ -36,6 +36,7 @@ export interface JobQueueItem {
 
 export interface Profile {
   id: number
+  name: string
   skills: string[]
   target_titles: string[]
   desired_seniority: string | null
