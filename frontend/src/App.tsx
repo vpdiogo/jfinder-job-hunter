@@ -65,6 +65,34 @@ function formatRecommendation(recommendation: string): string {
   return { apply: "Aplicar", review: "Revisar", skip: "Pular" }[recommendation] ?? recommendation
 }
 
+function formatEvaluationReason(reason: string): string {
+  const translations: Record<string, string> = {
+    "Required technologies: insufficient information.": "Tecnologias obrigatórias: informações insuficientes.",
+    "Target role: matched.": "Cargo-alvo: compatível.",
+    "Target role: no match.": "Cargo-alvo: não compatível.",
+    "Seniority: matched.": "Senioridade: compatível.",
+    "Seniority: no match.": "Senioridade: não compatível.",
+    "Seniority: insufficient information.": "Senioridade: informações insuficientes.",
+    "Work mode: matched.": "Modalidade: compatível.",
+    "Work mode: no match.": "Modalidade: não compatível.",
+    "Work mode: insufficient information.": "Modalidade: informações insuficientes.",
+    "Location: insufficient information.": "Localização: informações insuficientes.",
+    "Location/timezone: matched.": "Localização/fuso horário: compatível.",
+    "Location/timezone: no match.": "Localização/fuso horário: não compatível.",
+    "Salary: insufficient information.": "Faixa salarial: informações insuficientes.",
+    "Salary: range overlaps.": "Faixa salarial: há sobreposição.",
+    "Salary: range does not overlap.": "Faixa salarial: não há sobreposição.",
+    "Languages: insufficient information.": "Idiomas: informações insuficientes.",
+  }
+  if (reason.startsWith("Required technologies: ") && reason.endsWith(" matched.")) {
+    return "Tecnologias obrigatórias: " + reason.slice(23, -9) + " compatíveis."
+  }
+  if (reason.startsWith("Languages: ") && reason.endsWith(" matched.")) {
+    return "Idiomas: " + reason.slice(11, -9) + " compatíveis."
+  }
+  return translations[reason] ?? reason
+}
+
 function App() {
   const [tab, setTab] = useState<'queue' | 'profile' | 'new-job' | 'base'>('queue')
   const [jobs, setJobs] = useState<JobQueueItem[]>([])
@@ -451,7 +479,7 @@ function App() {
               <div className="metrics"><div><small>Score</small><strong>{selectedJob.score ?? '—'}</strong></div><div><small>Status</small><strong>{formatStatus(selectedJob.status)}</strong></div><div><small>Recomendação</small><strong>{selectedJob.recommendation ? formatRecommendation(selectedJob.recommendation) : '—'}</strong></div></div><h3>Dossiê de estudo</h3><div className="dossier-summary"><span><strong>Perfil em foco:</strong> {focusProfile?.name ?? "Não informado"}</span><span><strong>Senioridade:</strong> {selectedJob.seniority ?? "Não informada"}</span><span><strong>Modalidade:</strong> {selectedJob.work_mode ?? "Não informada"}</span>{selectedJob.languages.length > 0 && <span><strong>Idiomas:</strong> {selectedJob.languages.join(", ")}</span>}</div>
               <h3>Requisitos</h3><div className="chips">{[...selectedJob.required_skills, ...selectedJob.required_technologies].length > 0 ? [...selectedJob.required_skills, ...selectedJob.required_technologies].map((skill) => <span key={skill}>{skill}</span>) : <span>Não informado</span>}</div>{selectedJob.responsibilities.length > 0 && <><h3>Responsabilidades</h3><ul>{selectedJob.responsibilities.map((item) => <li key={item}>{item}</li>)}</ul></>}
               {selectedJob.desired_technologies.length > 0 && <><h3>Tecnologias desejáveis</h3><div className="chips">{selectedJob.desired_technologies.map((technology) => <span key={technology}>{technology}</span>)}</div></>}
-              {latestEvaluation && <><h3>Última avaliação</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
+              {latestEvaluation && <><h3>Última avaliação</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{formatEvaluationReason(reason)}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
               <h3>Anotações</h3><form className="note-form" onSubmit={(event) => void saveJobNote(event)}><textarea value={noteContent} onChange={(event) => setNoteContent(event.target.value)} placeholder="Registre observações, perguntas e próximos passos" /><div className="actions"><button type="submit">{editingNoteId ? "Salvar alteração" : "Adicionar anotação"}</button>{editingNoteId && <button type="button" className="secondary" onClick={() => { setEditingNoteId(null); setNoteContent("") }}>Cancelar</button>}</div></form>{notes.length > 0 && <div className="note-list">{notes.map((note) => <button key={note.id} type="button" onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content) }}><span>{note.content}</span><small>Atualizada em {new Date(note.updated_at).toLocaleString()}</small></button>)}</div>}
               {evaluations.length > 0 && <><h3>Histórico de avaliações</h3><div className="evaluation-history">{evaluations.map((evaluation) => <div key={evaluation.id}><strong>{evaluation.score} · {formatRecommendation(evaluation.recommendation)}</strong><small>{new Date(evaluation.evaluated_at).toLocaleString()}</small><span>{evaluation.matched_skills.join(', ') || 'Sem skills identificadas'}</span></div>)}</div></>}
               <div className="actions">{selectedJob.status === 'discovered' && <button onClick={() => void evaluateJob()}>Avaliar vaga</button>}{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}</div>
