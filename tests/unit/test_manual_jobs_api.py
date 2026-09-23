@@ -89,3 +89,22 @@ def test_creates_manual_job_associates_profile_and_evaluates(
         },
     )
     assert duplicate.status_code == 409
+
+
+def test_extracts_accented_plural_desired_section(client: TestClient) -> None:
+    response = client.post(
+        "/jobs/extract",
+        json={
+            "description": """\
+Requisitos:
+- Python
+
+Desejáveis:
+- Terraform e AWS
+"""
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["required_technologies"] == ["Python"]
+    assert response.json()["desired_technologies"] == ["AWS", "Terraform"]

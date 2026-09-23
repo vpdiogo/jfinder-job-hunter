@@ -5,7 +5,7 @@ _TECHNOLOGIES = (
     "SQLite", "Docker", "Kubernetes", "AWS", "GCP", "Azure", "Terraform",
     "React", "TypeScript", "JavaScript", "Node.js", "Java", "Go", "Kafka",
 )
-_DESIRED_HEADINGS = ("desejável", "desejaveis", "diferencial", "diferenciais", "nice to have", "bonus")
+_DESIRED_HEADINGS = ("desejável", "desejáveis", "desejaveis", "diferencial", "diferenciais", "nice to have", "bonus")
 _RESPONSIBILITY_HEADINGS = ("responsabilidades", "responsibilities", "o que você fará", "what you will do")
 
 
