@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: testes",
+      "type": "shell",
+      "command": "python -m pytest",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: Ruff",
+      "type": "shell",
+      "command": "python -m ruff check .",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: build",
+      "type": "shell",
+      "command": "npm run build --prefix frontend",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
