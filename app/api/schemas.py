@@ -54,6 +54,17 @@ class ManualJobCreateRequest(BaseModel):
     profile_id: int = Field(ge=1)
 
 
+class JobNoteInput(BaseModel):
+    content: str = Field(min_length=1, max_length=20_000)
+
+
+class JobNoteResponse(JobNoteInput):
+    id: int
+    job_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class JobImportRequest(BaseModel):
     jobs: list[JobInput] = Field(min_length=1)
 
