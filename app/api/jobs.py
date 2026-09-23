@@ -10,6 +10,7 @@ from app.api.schemas import (
     JobEvaluationRequest,
     JobImportRequest,
     JobImportResponse,
+    JobInput,
     JobNoteInput,
     JobNoteResponse,
     JobQueueResponse,
@@ -226,6 +227,40 @@ def update_job_status(
     return _transition_response(session, job_id, request.status)
 
 
+@router.put("/{job_id}", response_model=JobQueueResponse)
+def update_job(
+    job_id: int,
+    request: JobInput,
+    session: SessionDependency,
+) -> JobQueueResponse:
+    job = _get_job_or_404(session, job_id)
+    duplicate_id = session.scalar(
+        select(JobRecord.id).where(JobRecord.url == request.url, JobRecord.id != job_id)
+    )
+    if duplicate_id is not None:
+        raise HTTPException(status_code=409, detail="A job with this URL already exists.")
+
+    for field, value in request.model_dump().items():
+        setattr(job, field, value)
+
+    application = session.scalar(
+        select(ApplicationRecord).where(ApplicationRecord.job_id == job.id)
+    )
+    evaluation = None
+    if job.focus_profile_id is not None:
+        profile = session.get(CareerProfileRecord, job.focus_profile_id)
+        if profile is not None:
+            evaluation = evaluate_and_store(session, job, profile)
+
+    session.commit()
+    session.refresh(job)
+    if application is not None:
+        session.refresh(application)
+    if evaluation is not None:
+        session.refresh(evaluation)
+    return _queue_response(job, application, evaluation)
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(job_id: int, session: SessionDependency) -> JobResponse:
     return _job_response(_get_job_or_404(session, job_id))
@@ -278,6 +313,20 @@ def update_job_note(
     session.commit()
     session.refresh(note)
     return _note_response(note)
+
+
+@router.delete("/{job_id}/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_job_note(
+    job_id: int,
+    note_id: int,
+    session: SessionDependency,
+) -> None:
+    _get_job_or_404(session, job_id)
+    note = session.get(JobNoteRecord, note_id)
+    if note is None or note.job_id != job_id:
+        raise HTTPException(status_code=404, detail="Job note not found.")
+    session.delete(note)
+    session.commit()
 
 
 def _transition_response(
