@@ -34,6 +34,7 @@ def _upgrade_sqlite(engine: Engine) -> None:
 
     additions = {
         "career_profiles": {
+            "name": "VARCHAR(100)",
             "desired_seniority": "VARCHAR(50)",
             "work_modes": "JSON",
             "locations": "JSON",
@@ -63,6 +64,10 @@ def _upgrade_sqlite(engine: Engine) -> None:
             for name, definition in columns.items():
                 if name not in existing:
                     connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {definition}"))
+            if table == "career_profiles":
+                connection.execute(
+                    text("UPDATE career_profiles SET name = 'Perfil ' || id WHERE name IS NULL OR trim(name) = ''")
+                )
 
 
 def get_session() -> Generator[Session]:

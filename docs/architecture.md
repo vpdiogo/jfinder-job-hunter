@@ -42,3 +42,12 @@ is excluded from the score rather than treated as a mismatch.
 
 Existing jobs and profiles remain compatible: when none of the enriched fields
 are available, the original skill-and-title scoring rules are used unchanged.
+
+## Resume ingestion
+
+The first ingestion version accepts plain text. It deterministically extracts
+skills, target roles, languages, experience entries, and education from common
+Portuguese and English section headings. The original text and extracted draft
+are persisted before any profile changes. A separate confirmation endpoint
+receives the user-reviewed profile data and either creates a profile or updates
+the explicitly selected one.

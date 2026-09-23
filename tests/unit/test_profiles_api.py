@@ -119,3 +119,27 @@ def test_rejects_partial_update_that_invalidates_salary_range(client: TestClient
 
     assert response.status_code == 422
     assert client.get(f"/profiles/{profile['id']}").json()["salary_min"] == 100000
+
+
+def test_creates_and_updates_a_named_profile(client: TestClient) -> None:
+    profile = client.post(
+        "/profiles",
+        json={**profile_payload(), "name": "Tech Lead — Plataforma"},
+    ).json()
+
+    assert profile["name"] == "Tech Lead — Plataforma"
+
+    response = client.put(
+        f"/profiles/{profile['id']}",
+        json={"name": "DevOps Engineer — Cloud"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "DevOps Engineer — Cloud"
+
+
+def test_generates_a_name_for_a_legacy_profile_payload(client: TestClient) -> None:
+    response = client.post("/profiles", json=profile_payload())
+
+    assert response.status_code == 201
+    assert response.json()["name"] == "Perfil 1"

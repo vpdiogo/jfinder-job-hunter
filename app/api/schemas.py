@@ -65,6 +65,7 @@ class JobQueueResponse(JobResponse):
 
 
 class CareerProfileInput(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     skills: list[str] = Field(default_factory=list)
     target_titles: list[str] = Field(default_factory=list)
     desired_seniority: str | None = None
@@ -85,6 +86,7 @@ class CareerProfileInput(BaseModel):
 
 
 class CareerProfileUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     skills: list[str] | None = None
     target_titles: list[str] | None = None
     desired_seniority: str | None = None
@@ -105,8 +107,37 @@ class CareerProfileUpdate(BaseModel):
 
 
 class CareerProfileResponse(CareerProfileInput):
+    name: str
     id: int
     created_at: datetime
+
+
+class ResumeExtractionRequest(BaseModel):
+    content: str = Field(min_length=20, max_length=100_000)
+
+
+class ResumeDraftResponse(BaseModel):
+    skills: list[str] = Field(default_factory=list)
+    target_titles: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    experiences: list[str] = Field(default_factory=list)
+    education: list[str] = Field(default_factory=list)
+
+
+class ResumeExtractionResponse(BaseModel):
+    id: int
+    source_content: str
+    draft: ResumeDraftResponse
+    confirmed_profile_id: int | None
+    confirmed_at: datetime | None
+    created_at: datetime
+
+
+class ResumeExtractionConfirmationRequest(BaseModel):
+    profile: CareerProfileInput
+    profile_id: int | None = Field(default=None, ge=1)
+    experiences: list[str] = Field(default_factory=list)
+    education: list[str] = Field(default_factory=list)
 
 
 class EvaluationRequest(BaseModel):

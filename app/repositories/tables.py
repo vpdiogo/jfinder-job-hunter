@@ -14,6 +14,7 @@ class CareerProfileRecord(Base):
     __tablename__ = "career_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     skills: Mapped[list[str]] = mapped_column(JSON)
     target_titles: Mapped[list[str]] = mapped_column(JSON)
     desired_seniority: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -25,6 +26,20 @@ class CareerProfileRecord(Base):
     languages: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     required_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     desired_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class ResumeExtractionRecord(Base):
+    __tablename__ = "resume_extractions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_content: Mapped[str] = mapped_column(String)
+    extracted_data: Mapped[dict[str, object]] = mapped_column(JSON)
+    confirmed_data: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    profile_id: Mapped[int | None] = mapped_column(
+        ForeignKey("career_profiles.id"), nullable=True
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

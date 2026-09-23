@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
+  confirmResumeExtraction,
   createProfile,
+  extractResume,
   getJobEvaluations,
   evaluateSavedJob,
   getProfiles,
@@ -10,7 +12,7 @@ import {
   updateJobStatus,
   updateProfile,
 } from './api'
-import type { Evaluation, JobQueueItem, JobStatus, Profile } from './types'
+import type { Evaluation, JobQueueItem, JobStatus, Profile, ResumeExtraction } from './types'
 import './App.css'
 
 const statuses: JobStatus[] = [
@@ -44,6 +46,10 @@ function toList(value: string): string[] {
     .filter(Boolean)
 }
 
+function toLines(value: string): string[] {
+  return value.split('\n').map((item) => item.trim()).filter(Boolean)
+}
+
 function formatStatus(status: string): string {
   return status.replaceAll('_', ' ')
 }
@@ -58,6 +64,7 @@ function App() {
   const [recommendation, setRecommendation] = useState('')
   const [minScore, setMinScore] = useState('')
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null)
+  const [profileName, setProfileName] = useState('')
   const [skills, setSkills] = useState('')
   const [targetTitles, setTargetTitles] = useState('')
   const [desiredSeniority, setDesiredSeniority] = useState('')
@@ -69,8 +76,13 @@ function App() {
   const [languages, setLanguages] = useState('')
   const [requiredTechnologies, setRequiredTechnologies] = useState('')
   const [desiredTechnologies, setDesiredTechnologies] = useState('')
+  const [resumeContent, setResumeContent] = useState('')
+  const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(null)
+  const [experiences, setExperiences] = useState('')
+  const [education, setEducation] = useState('')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const hasLoadedProfiles = useRef(false)
 
   const loadQueue = useCallback(async () => {
     try {
@@ -88,11 +100,14 @@ function App() {
     try {
       const data = await getProfiles()
       setProfiles(data)
-      if (data.length && selectedProfileId === null) selectProfile(data[0])
+      if (!hasLoadedProfiles.current && data.length) {
+        selectProfile(data[0])
+      }
+      hasLoadedProfiles.current = true
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erro ao carregar perfis.')
     }
-  }, [selectedProfileId])
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -119,6 +134,7 @@ function App() {
 
   function selectProfile(profile: Profile) {
     setSelectedProfileId(profile.id)
+    setProfileName(profile.name)
     setSkills(profile.skills.join(', '))
     setTargetTitles(profile.target_titles.join(', '))
     setDesiredSeniority(profile.desired_seniority ?? '')
@@ -175,9 +191,9 @@ function App() {
     }
   }
 
-  async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const data = {
+  function profileData() {
+    return {
+      name: profileName.trim() || 'Perfil sem nome',
       skills: toList(skills),
       target_titles: toList(targetTitles),
       desired_seniority: desiredSeniority || null,
@@ -190,12 +206,40 @@ function App() {
       required_technologies: toList(requiredTechnologies),
       desired_technologies: toList(desiredTechnologies),
     }
+  }
+
+  async function extractResumeText() {
     try {
-      const profile = selectedProfileId
+      const extraction = await extractResume(resumeContent)
+      setResumeExtraction(extraction)
+      setSkills(extraction.draft.skills.join(', '))
+      setProfileName(extraction.draft.target_titles[0] ?? '')
+      setTargetTitles(extraction.draft.target_titles.join(', '))
+      setLanguages(extraction.draft.languages.join(', '))
+      setExperiences(extraction.draft.experiences.join('\n'))
+      setEducation(extraction.draft.education.join('\n'))
+      setMessage('Rascunho extraído. Revise os campos antes de salvar.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível extrair o currículo.')
+    }
+  }
+
+  async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const data = profileData()
+    try {
+      const profile = resumeExtraction
+        ? await confirmResumeExtraction(resumeExtraction.id, {
+            profile: data,
+            experiences: toLines(experiences),
+            education: toLines(education),
+          })
+        : selectedProfileId
         ? await updateProfile(selectedProfileId, data)
         : await createProfile(data)
       await loadProfiles()
       selectProfile(profile)
+      setResumeExtraction(null)
       setMessage('Perfil salvo.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível salvar o perfil.')
@@ -248,7 +292,7 @@ function App() {
             </> : <p className="empty">Selecione uma vaga para ver seus detalhes e ações.</p>}
           </aside>
         </section>
-      ) : <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Perfil profissional</p><h2>Base para suas avaliações</h2></div><button className="secondary" onClick={() => { setSelectedProfileId(null); setSkills(''); setTargetTitles(''); setDesiredSeniority(''); setWorkModes(''); setLocations(''); setTimezones(''); setSalaryMin(''); setSalaryMax(''); setLanguages(''); setRequiredTechnologies(''); setDesiredTechnologies('') }}>Novo perfil</button></div><div className="profile-layout"><div className="profile-list">{profiles.map((profile) => <button key={profile.id} className={selectedProfileId === profile.id ? 'selected' : ''} onClick={() => selectProfile(profile)}><strong>Perfil #{profile.id}</strong><small>{profile.target_titles.join(', ') || 'Sem cargos definidos'}</small></button>)}</div><form onSubmit={(event) => void saveProfile(event)}><label>Skills separadas por vírgula<textarea value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, FastAPI, SQLAlchemy" /></label><label>Cargos-alvo separados por vírgula<textarea value={targetTitles} onChange={(event) => setTargetTitles(event.target.value)} placeholder="Backend Engineer, Platform Engineer" /></label><label>Senioridade desejada<input value={desiredSeniority} onChange={(event) => setDesiredSeniority(event.target.value)} placeholder="Senior" /></label><label>Modalidades aceitas, separadas por vírgula<input value={workModes} onChange={(event) => setWorkModes(event.target.value)} placeholder="remote, hybrid" /></label><label>Localizações aceitas, separadas por vírgula<input value={locations} onChange={(event) => setLocations(event.target.value)} placeholder="Brazil, São Paulo" /></label><label>Fusos aceitos, separados por vírgula<input value={timezones} onChange={(event) => setTimezones(event.target.value)} placeholder="America/Sao_Paulo" /></label><label>Faixa salarial mínima<input type="number" min="0" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)} /></label><label>Faixa salarial máxima<input type="number" min="0" value={salaryMax} onChange={(event) => setSalaryMax(event.target.value)} /></label><label>Idiomas, separados por vírgula<input value={languages} onChange={(event) => setLanguages(event.target.value)} placeholder="English, Portuguese" /></label><label>Tecnologias obrigatórias, separadas por vírgula<textarea value={requiredTechnologies} onChange={(event) => setRequiredTechnologies(event.target.value)} placeholder="Python, FastAPI" /></label><label>Tecnologias desejáveis, separadas por vírgula<textarea value={desiredTechnologies} onChange={(event) => setDesiredTechnologies(event.target.value)} placeholder="Docker, Kubernetes" /></label><button type="submit">Salvar perfil</button></form></div></section>}
+      ) : <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Perfil profissional</p><h2>Base para suas avaliações</h2></div><button className="secondary" onClick={() => { setSelectedProfileId(null); setProfileName(''); setSkills(''); setTargetTitles(''); setDesiredSeniority(''); setWorkModes(''); setLocations(''); setTimezones(''); setSalaryMin(''); setSalaryMax(''); setLanguages(''); setRequiredTechnologies(''); setDesiredTechnologies(''); setResumeExtraction(null); setResumeContent(''); setExperiences(''); setEducation('') }}>Novo perfil</button></div><div className="resume-import"><label>Currículo em texto<textarea value={resumeContent} onChange={(event) => setResumeContent(event.target.value)} placeholder="Cole aqui o conteúdo do currículo" /></label><button type="button" className="secondary" onClick={() => void extractResumeText()}>Extrair rascunho</button>{resumeExtraction && <div className="resume-draft"><strong>Rascunho pronto para revisão</strong><label>Experiências extraídas<textarea value={experiences} onChange={(event) => setExperiences(event.target.value)} placeholder="Uma experiência por linha" /></label><label>Formação extraída<textarea value={education} onChange={(event) => setEducation(event.target.value)} placeholder="Uma formação por linha" /></label><small>Os campos do perfil foram preenchidos; revise-os e salve para confirmar.</small></div>}</div><div className="profile-layout"><div className="profile-list">{profiles.map((profile) => <button key={profile.id} className={selectedProfileId === profile.id ? 'selected' : ''} onClick={() => selectProfile(profile)}><strong>{profile.name}</strong><small>{profile.target_titles.join(', ') || 'Sem cargos definidos'}</small></button>)}</div><form onSubmit={(event) => void saveProfile(event)}><label>Nome do perfil<input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Tech Lead — Plataforma" /></label><label>Skills separadas por vírgula<textarea value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, FastAPI, SQLAlchemy" /></label><label>Cargos-alvo separados por vírgula<textarea value={targetTitles} onChange={(event) => setTargetTitles(event.target.value)} placeholder="Backend Engineer, Platform Engineer" /></label><label>Senioridade desejada<input value={desiredSeniority} onChange={(event) => setDesiredSeniority(event.target.value)} placeholder="Senior" /></label><label>Modalidades aceitas, separadas por vírgula<input value={workModes} onChange={(event) => setWorkModes(event.target.value)} placeholder="remote, hybrid" /></label><label>Localizações aceitas, separadas por vírgula<input value={locations} onChange={(event) => setLocations(event.target.value)} placeholder="Brazil, São Paulo" /></label><label>Fusos aceitos, separados por vírgula<input value={timezones} onChange={(event) => setTimezones(event.target.value)} placeholder="America/Sao_Paulo" /></label><label>Faixa salarial mínima<input type="number" min="0" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)} /></label><label>Faixa salarial máxima<input type="number" min="0" value={salaryMax} onChange={(event) => setSalaryMax(event.target.value)} /></label><label>Idiomas, separados por vírgula<input value={languages} onChange={(event) => setLanguages(event.target.value)} placeholder="English, Portuguese" /></label><label>Tecnologias obrigatórias, separadas por vírgula<textarea value={requiredTechnologies} onChange={(event) => setRequiredTechnologies(event.target.value)} placeholder="Python, FastAPI" /></label><label>Tecnologias desejáveis, separadas por vírgula<textarea value={desiredTechnologies} onChange={(event) => setDesiredTechnologies(event.target.value)} placeholder="Docker, Kubernetes" /></label><button type="submit">Salvar perfil</button></form></div></section>}
     </main>
   )
 }

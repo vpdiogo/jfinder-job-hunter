@@ -55,3 +55,6 @@ form { display: grid; gap: 16px; }
 .evaluation-history div { display: grid; gap: 3px; padding: 10px; border-left: 3px solid #aab7f7; background: #f6f8fc; color: #526078; font-size: .85rem; }
 .evaluation-history strong { color: #273c9d; text-transform: capitalize; }
 .evaluation-history small { color: #77859c; }
+.resume-import, .resume-draft { display: grid; gap: 10px; }
+.resume-import { margin: 20px 0; padding: 16px; border: 1px solid #d7def0; border-radius: 10px; background: #f8faff; }
+.resume-draft { padding: 12px; background: #edf1ff; color: #405070; font-size: .9rem; }
