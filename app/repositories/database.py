@@ -46,6 +46,9 @@ def _upgrade_sqlite(engine: Engine) -> None:
             "desired_technologies": "JSON",
         },
         "jobs": {
+            "responsibilities": "JSON",
+            "source": "VARCHAR(50)",
+            "focus_profile_id": "INTEGER",
             "required_technologies": "JSON",
             "desired_technologies": "JSON",
             "seniority": "VARCHAR(50)",

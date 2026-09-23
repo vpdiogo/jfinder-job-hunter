@@ -11,6 +11,8 @@ class JobInput(BaseModel):
     url: str = Field(min_length=1)
     description: str = ""
     required_skills: list[str] = Field(default_factory=list)
+    responsibilities: list[str] = Field(default_factory=list)
+    source: str = Field(default="manual", min_length=1, max_length=50)
     required_technologies: list[str] = Field(default_factory=list)
     desired_technologies: list[str] = Field(default_factory=list)
     seniority: str | None = None
@@ -29,8 +31,27 @@ class JobInput(BaseModel):
 
 
 class JobResponse(JobInput):
+    focus_profile_id: int | None = None
     id: int
     created_at: datetime
+
+
+class JobDescriptionExtractionRequest(BaseModel):
+    description: str = Field(min_length=20, max_length=100_000)
+
+
+class JobDescriptionExtractionResponse(BaseModel):
+    responsibilities: list[str] = Field(default_factory=list)
+    required_technologies: list[str] = Field(default_factory=list)
+    desired_technologies: list[str] = Field(default_factory=list)
+    seniority: str | None = None
+    work_mode: str | None = None
+    languages: list[str] = Field(default_factory=list)
+
+
+class ManualJobCreateRequest(BaseModel):
+    job: JobInput
+    profile_id: int = Field(ge=1)
 
 
 class JobImportRequest(BaseModel):

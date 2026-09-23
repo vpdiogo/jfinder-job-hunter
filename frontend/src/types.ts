@@ -18,6 +18,9 @@ export interface JobQueueItem {
   url: string
   description: string
   required_skills: string[]
+  responsibilities: string[]
+  source: string
+  focus_profile_id: number | null
   required_technologies: string[]
   desired_technologies: string[]
   seniority: string | null
@@ -78,4 +81,13 @@ export interface ResumeExtraction {
   confirmed_profile_id: number | null
   confirmed_at: string | null
   created_at: string
+}
+
+export interface JobDescriptionExtraction {
+  responsibilities: string[]
+  required_technologies: string[]
+  desired_technologies: string[]
+  seniority: string | null
+  work_mode: string | null
+  languages: string[]
 }
