@@ -71,6 +71,10 @@ def _upgrade_sqlite(engine: Engine) -> None:
                 connection.execute(
                     text("UPDATE career_profiles SET name = 'Perfil ' || id WHERE name IS NULL OR trim(name) = ''")
                 )
+            if table == "jobs":
+                connection.execute(
+                    text("UPDATE jobs SET source = 'manual' WHERE source IS NULL OR trim(source) = ''")
+                )
 
 
 def get_session() -> Generator[Session]:

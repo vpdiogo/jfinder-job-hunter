@@ -265,7 +265,7 @@ def _job_response(record: JobRecord) -> JobResponse:
         description=record.description,
         required_skills=record.required_skills,
         responsibilities=record.responsibilities or [],
-        source=record.source,
+        source=record.source or "manual",
         focus_profile_id=record.focus_profile_id,
         required_technologies=record.required_technologies or [],
         desired_technologies=record.desired_technologies or [],
