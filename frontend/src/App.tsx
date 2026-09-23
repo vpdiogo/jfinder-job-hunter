@@ -400,7 +400,7 @@ function App() {
         </nav>
       </header>
 
-      {message && <p className="message" role="status">{message}</p>}
+      {message && <div className="toast" role="status">{message}</div>}
 
       {tab === "base" ? (
         <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Base profissional</p><h2>Seu histórico, antes dos recortes para candidaturas</h2></div></div><form onSubmit={(event) => void saveProfessionalBaseForm(event)}><label>Currículo em texto<textarea value={baseResume} onChange={(event) => setBaseResume(event.target.value)} placeholder="Cole aqui o currículo completo" /></label><button type="button" className="secondary" onClick={() => void extractBaseResume()}>Extrair dados do currículo</button><label>Links relevantes, separados por vírgula<input value={baseLinks} onChange={(event) => setBaseLinks(event.target.value)} placeholder="LinkedIn, GitHub, portfólio" /></label><label>Skills, separadas por vírgula<textarea value={baseSkills} onChange={(event) => setBaseSkills(event.target.value)} placeholder="Python, FastAPI, liderança técnica" /></label><label>Experiências, uma por linha<textarea value={baseExperiences} onChange={(event) => setBaseExperiences(event.target.value)} placeholder="Platform Engineer — Acme" /></label><label>Formação, uma por linha<textarea value={baseEducation} onChange={(event) => setBaseEducation(event.target.value)} placeholder="Ciência da Computação" /></label><label>Idiomas, separados por vírgula<input value={baseLanguages} onChange={(event) => setBaseLanguages(event.target.value)} placeholder="English, Portuguese" /></label><button type="submit">Salvar base profissional</button></form></section>
