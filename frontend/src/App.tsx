@@ -138,7 +138,12 @@ function App() {
   const [manualLanguages, setManualLanguages] = useState('')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [messageVersion, setMessageVersion] = useState(0)
   const [toastLeaving, setToastLeaving] = useState(false)
+  const showMessage = (text: string) => {
+    setMessage(text)
+    setMessageVersion((version) => version + 1)
+  }
   const hasLoadedProfiles = useRef(false)
   const selectedJobRequest = useRef(0)
 
@@ -148,7 +153,7 @@ function App() {
       setJobs(data)
       setSelectedJob((current) => data.find((job) => job.id === current?.id) ?? null)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Erro ao carregar a fila.')
+      showMessage(error instanceof Error ? error.message : 'Erro ao carregar a fila.')
     } finally {
       setLoading(false)
     }
@@ -163,7 +168,7 @@ function App() {
       }
       hasLoadedProfiles.current = true
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Erro ao carregar perfis.')
+      showMessage(error instanceof Error ? error.message : 'Erro ao carregar perfis.')
     }
   }, [])
 
@@ -180,7 +185,7 @@ function App() {
     const leaveTimer = window.setTimeout(() => setToastLeaving(true), 3900)
     const clearTimer = window.setTimeout(() => { setMessage(""); setToastLeaving(false) }, 4300)
     return () => { window.clearTimeout(resetTimer); window.clearTimeout(leaveTimer); window.clearTimeout(clearTimer) }
-  }, [message])
+  }, [message, messageVersion])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -217,7 +222,7 @@ function App() {
       setNotes(jobNotes)
     } catch (error) {
       if (requestId === selectedJobRequest.current) {
-        setMessage(error instanceof Error ? error.message : 'Erro ao carregar detalhes.')
+        showMessage(error instanceof Error ? error.message : 'Erro ao carregar detalhes.')
       }
     }
   }
@@ -241,12 +246,12 @@ function App() {
   async function evaluateJob() {
     if (!selectedJob) return
     if (selectedProfileId === null) {
-      setMessage('Selecione ou crie um perfil antes de avaliar a vaga.')
+      showMessage('Selecione ou crie um perfil antes de avaliar a vaga.')
       return
     }
     try {
       const evaluation = await evaluateSavedJob(selectedJob.id, selectedProfileId)
-      setMessage('Vaga avaliada.')
+      showMessage('Vaga avaliada.')
       await loadQueue()
       await selectJob({
         ...selectedJob,
@@ -255,7 +260,7 @@ function App() {
         recommendation: evaluation.recommendation,
       })
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível avaliar a vaga.')
+      showMessage(error instanceof Error ? error.message : 'Não foi possível avaliar a vaga.')
     }
   }
 
@@ -273,11 +278,11 @@ function App() {
           : action === 'apply'
           ? 'applied'
           : action
-      setMessage('Status atualizado.')
+      showMessage('Status atualizado.')
       await loadQueue()
       await selectJob({ ...selectedJob, status: nextStatus })
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível atualizar o status.')
+      showMessage(error instanceof Error ? error.message : 'Não foi possível atualizar o status.')
     }
   }
 
@@ -302,7 +307,7 @@ function App() {
     event.preventDefault()
     const data = profileData()
     if (selectedProfileId === null && professionalBaseState !== "ready") {
-      setMessage(
+      showMessage(
         professionalBaseState === "loading"
           ? "Aguarde o carregamento da base profissional."
           : "Crie uma Base profissional antes de criar um perfil de candidatura.",
@@ -315,9 +320,9 @@ function App() {
         : await createApplicationProfileFromBase(data)
       await loadProfiles()
       selectProfile(profile)
-      setMessage('Perfil salvo.')
+      showMessage('Perfil salvo.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível salvar o perfil.')
+      showMessage(error instanceof Error ? error.message : 'Não foi possível salvar o perfil.')
     }
   }
 
@@ -328,9 +333,9 @@ function App() {
       setBaseExperiences(extraction.draft.experiences.join("\n"))
       setBaseEducation(extraction.draft.education.join("\n"))
       setBaseLanguages(extraction.draft.languages.join(", "))
-      setMessage("Dados extraídos. Revise-os antes de salvar a base profissional.")
+      showMessage("Dados extraídos. Revise-os antes de salvar a base profissional.")
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível extrair o currículo.")
+      showMessage(error instanceof Error ? error.message : "Não foi possível extrair o currículo.")
     }
   }
 
@@ -342,15 +347,15 @@ function App() {
         experiences: toLines(baseExperiences), education: toLines(baseEducation),
         languages: toList(baseLanguages),
       })
-      setMessage("Base profissional salva.")
+      showMessage("Base profissional salva.")
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível salvar a base profissional.")
+      showMessage(error instanceof Error ? error.message : "Não foi possível salvar a base profissional.")
     }
   }
 
   async function extractManualJob() {
     if (manualDescription.trim().length < 20) {
-      setMessage("Cole uma descrição de ao menos 20 caracteres para extrair os dados.")
+      showMessage("Cole uma descrição de ao menos 20 caracteres para extrair os dados.")
       return
     }
     try {
@@ -361,16 +366,16 @@ function App() {
       setManualSeniority(extraction.seniority ?? "")
       setManualWorkMode(extraction.work_mode ?? "")
       setManualLanguages(extraction.languages.join(", "))
-      setMessage("Dados extraídos. Revise-os antes de salvar.")
+      showMessage("Dados extraídos. Revise-os antes de salvar.")
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível extrair a vaga.")
+      showMessage(error instanceof Error ? error.message : "Não foi possível extrair a vaga.")
     }
   }
 
   async function saveManualJob(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!manualProfileId) {
-      setMessage("Selecione o perfil em foco para esta vaga.")
+      showMessage("Selecione o perfil em foco para esta vaga.")
       return
     }
     try {
@@ -391,9 +396,9 @@ function App() {
       setSelectedJob(job)
       setEvaluations(await getJobEvaluations(job.id))
       setTab("queue")
-      setMessage("Vaga cadastrada e avaliada com o perfil selecionado.")
+      showMessage("Vaga cadastrada e avaliada com o perfil selecionado.")
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível cadastrar a vaga.")
+      showMessage(error instanceof Error ? error.message : "Não foi possível cadastrar a vaga.")
     }
   }
 
@@ -409,9 +414,9 @@ function App() {
       setNotes(await getJobNotes(selectedJob.id))
       setNoteContent("")
       setEditingNoteId(null)
-      setMessage("Anotação salva.")
+      showMessage("Anotação salva.")
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível salvar a anotação.")
+      showMessage(error instanceof Error ? error.message : "Não foi possível salvar a anotação.")
     }
   }
 
