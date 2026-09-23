@@ -46,6 +46,9 @@ def _upgrade_sqlite(engine: Engine) -> None:
             "desired_technologies": "JSON",
         },
         "jobs": {
+            "responsibilities": "JSON",
+            "source": "VARCHAR(50)",
+            "focus_profile_id": "INTEGER",
             "required_technologies": "JSON",
             "desired_technologies": "JSON",
             "seniority": "VARCHAR(50)",
@@ -67,6 +70,10 @@ def _upgrade_sqlite(engine: Engine) -> None:
             if table == "career_profiles":
                 connection.execute(
                     text("UPDATE career_profiles SET name = 'Perfil ' || id WHERE name IS NULL OR trim(name) = ''")
+                )
+            if table == "jobs":
+                connection.execute(
+                    text("UPDATE jobs SET source = 'manual' WHERE source IS NULL OR trim(source) = ''")
                 )
 
 

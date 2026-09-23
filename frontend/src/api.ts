@@ -1,4 +1,4 @@
-import type { Evaluation, JobQueueItem, JobStatus, Profile, ResumeExtraction } from './types'
+import type { Evaluation, JobDescriptionExtraction, JobQueueItem, JobStatus, Profile, ResumeExtraction } from './types'
 
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000'
 
@@ -86,6 +86,23 @@ export function confirmResumeExtraction(
   data: { profile: Omit<Profile, 'id' | 'created_at'>; experiences: string[]; education: string[] },
 ): Promise<Profile> {
   return request<Profile>(`/profiles/resume-extractions/${extractionId}/confirm`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function extractJobDescription(description: string): Promise<JobDescriptionExtraction> {
+  return request<JobDescriptionExtraction>('/jobs/extract', {
+    method: 'POST',
+    body: JSON.stringify({ description }),
+  })
+}
+
+export function createManualJob(data: {
+  profile_id: number
+  job: Omit<JobQueueItem, 'id' | 'created_at' | 'status' | 'score' | 'recommendation' | 'applied_at' | 'focus_profile_id'>
+}): Promise<JobQueueItem> {
+  return request<JobQueueItem>('/jobs/manual', {
     method: 'POST',
     body: JSON.stringify(data),
   })

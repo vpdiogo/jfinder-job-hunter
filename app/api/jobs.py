@@ -5,6 +5,8 @@ from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
+    JobDescriptionExtractionRequest,
+    JobDescriptionExtractionResponse,
     JobEvaluationRequest,
     JobImportRequest,
     JobImportResponse,
@@ -12,6 +14,7 @@ from app.api.schemas import (
     JobResponse,
     JobStatusResponse,
     JobStatusUpdateRequest,
+    ManualJobCreateRequest,
     StoredEvaluationResponse,
 )
 from app.domain.enums import JobStatus, Recommendation
@@ -28,6 +31,7 @@ from app.services.application_service import (
     transition_application,
 )
 from app.services.evaluation_service import evaluate_and_store
+from app.services.job_description_parser import JobDescriptionParser
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 SessionDependency = Annotated[Session, Depends(get_session)]
@@ -72,6 +76,49 @@ def import_jobs(
         imported=[_job_response(record) for record in imported],
         skipped_urls=skipped_urls,
     )
+
+
+@router.post("/extract", response_model=JobDescriptionExtractionResponse)
+def extract_job_description(
+    request: JobDescriptionExtractionRequest,
+) -> JobDescriptionExtractionResponse:
+    return JobDescriptionExtractionResponse(
+        **JobDescriptionParser().extract(request.description)
+    )
+
+
+@router.post(
+    "/manual",
+    response_model=JobQueueResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_manual_job(
+    request: ManualJobCreateRequest,
+    session: SessionDependency,
+) -> JobQueueResponse:
+    existing = session.scalar(
+        select(JobRecord.id).where(JobRecord.url == request.job.url)
+    )
+    if existing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="A job with this URL already exists.",
+        )
+
+    profile = session.get(CareerProfileRecord, request.profile_id)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Profile not found.")
+
+    job = JobRecord(**request.job.model_dump(), focus_profile_id=profile.id)
+    session.add(job)
+    session.flush()
+    application = get_or_create_application(session, job.id)
+    evaluation = evaluate_and_store(session, job, profile)
+    session.commit()
+    session.refresh(job)
+    session.refresh(application)
+    session.refresh(evaluation)
+    return _queue_response(job, application, evaluation)
 
 
 @router.get("", response_model=list[JobResponse])
@@ -217,6 +264,9 @@ def _job_response(record: JobRecord) -> JobResponse:
         url=record.url,
         description=record.description,
         required_skills=record.required_skills,
+        responsibilities=record.responsibilities or [],
+        source=record.source or "manual",
+        focus_profile_id=record.focus_profile_id,
         required_technologies=record.required_technologies or [],
         desired_technologies=record.desired_technologies or [],
         seniority=record.seniority,

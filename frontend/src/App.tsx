@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   confirmResumeExtraction,
+  createManualJob,
   createProfile,
+  extractJobDescription,
   extractResume,
   getJobEvaluations,
   evaluateSavedJob,
@@ -55,7 +57,7 @@ function formatStatus(status: string): string {
 }
 
 function App() {
-  const [tab, setTab] = useState<'queue' | 'profile'>('queue')
+  const [tab, setTab] = useState<'queue' | 'profile' | 'new-job'>('queue')
   const [jobs, setJobs] = useState<JobQueueItem[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [selectedJob, setSelectedJob] = useState<JobQueueItem | null>(null)
@@ -80,6 +82,17 @@ function App() {
   const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(null)
   const [experiences, setExperiences] = useState('')
   const [education, setEducation] = useState('')
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualCompany, setManualCompany] = useState('')
+  const [manualUrl, setManualUrl] = useState('')
+  const [manualDescription, setManualDescription] = useState('')
+  const [manualProfileId, setManualProfileId] = useState('')
+  const [manualResponsibilities, setManualResponsibilities] = useState('')
+  const [manualRequiredTechnologies, setManualRequiredTechnologies] = useState('')
+  const [manualDesiredTechnologies, setManualDesiredTechnologies] = useState('')
+  const [manualSeniority, setManualSeniority] = useState('')
+  const [manualWorkMode, setManualWorkMode] = useState('')
+  const [manualLanguages, setManualLanguages] = useState('')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const hasLoadedProfiles = useRef(false)
@@ -246,6 +259,55 @@ function App() {
     }
   }
 
+  async function extractManualJob() {
+    if (manualDescription.trim().length < 20) {
+      setMessage("Cole uma descrição de ao menos 20 caracteres para extrair os dados.")
+      return
+    }
+    try {
+      const extraction = await extractJobDescription(manualDescription)
+      setManualResponsibilities(extraction.responsibilities.join("\n"))
+      setManualRequiredTechnologies(extraction.required_technologies.join(", "))
+      setManualDesiredTechnologies(extraction.desired_technologies.join(", "))
+      setManualSeniority(extraction.seniority ?? "")
+      setManualWorkMode(extraction.work_mode ?? "")
+      setManualLanguages(extraction.languages.join(", "))
+      setMessage("Dados extraídos. Revise-os antes de salvar.")
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível extrair a vaga.")
+    }
+  }
+
+  async function saveManualJob(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!manualProfileId) {
+      setMessage("Selecione o perfil em foco para esta vaga.")
+      return
+    }
+    try {
+      const job = await createManualJob({
+        profile_id: Number(manualProfileId),
+        job: {
+          title: manualTitle.trim(), company: manualCompany.trim(), url: manualUrl.trim(),
+          description: manualDescription, required_skills: [],
+          responsibilities: toLines(manualResponsibilities), source: "manual",
+          required_technologies: toList(manualRequiredTechnologies),
+          desired_technologies: toList(manualDesiredTechnologies),
+          seniority: manualSeniority || null, work_mode: manualWorkMode || null,
+          location: null, timezone: null, salary_min: null, salary_max: null,
+          languages: toList(manualLanguages),
+        },
+      })
+      await loadQueue()
+      setSelectedJob(job)
+      setEvaluations(await getJobEvaluations(job.id))
+      setTab("queue")
+      setMessage("Vaga cadastrada e avaliada com o perfil selecionado.")
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível cadastrar a vaga.")
+    }
+  }
+
   const latestEvaluation = evaluations[0]
 
   return (
@@ -257,13 +319,33 @@ function App() {
         </div>
         <nav aria-label="Navegação principal">
           <button className={tab === 'queue' ? 'active' : ''} onClick={() => setTab('queue')}>Vagas</button>
-          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Perfil</button>
+          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Perfil</button><button className={tab === 'new-job' ? 'active' : ''} onClick={() => setTab('new-job')}>Cadastrar vaga</button>
         </nav>
       </header>
 
       {message && <p className="message" role="status">{message}</p>}
 
-      {tab === 'queue' ? (
+      {tab === "new-job" ? (
+        <section className="profile-panel">
+          <div className="section-heading"><div><p className="eyebrow">Estudar uma vaga</p><h2>Cadastre uma oportunidade para estudar</h2></div></div>
+          <form onSubmit={(event) => void saveManualJob(event)}>
+            <label>Perfil em foco<select required value={manualProfileId} onChange={(event) => setManualProfileId(event.target.value)}><option value="">Selecione o perfil</option>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+            <label>Cargo<input required value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} placeholder="Tech Lead" /></label>
+            <label>Empresa<input required value={manualCompany} onChange={(event) => setManualCompany(event.target.value)} placeholder="Empresa" /></label>
+            <label>URL da vaga<input required type="url" value={manualUrl} onChange={(event) => setManualUrl(event.target.value)} placeholder="https://empresa.com/carreiras/vaga" /></label>
+            <label>Descrição da vaga<textarea required value={manualDescription} onChange={(event) => setManualDescription(event.target.value)} placeholder="Cole aqui a descrição completa da vaga" /></label>
+            <button type="button" className="secondary" onClick={() => void extractManualJob()}>Extrair dados da descrição</button>
+            <p className="hint">Revise os dados extraídos antes de salvar.</p>
+            <label>Responsabilidades, uma por linha<textarea value={manualResponsibilities} onChange={(event) => setManualResponsibilities(event.target.value)} /></label>
+            <label>Tecnologias obrigatórias, separadas por vírgula<input value={manualRequiredTechnologies} onChange={(event) => setManualRequiredTechnologies(event.target.value)} /></label>
+            <label>Tecnologias desejáveis, separadas por vírgula<input value={manualDesiredTechnologies} onChange={(event) => setManualDesiredTechnologies(event.target.value)} /></label>
+            <label>Senioridade<input value={manualSeniority} onChange={(event) => setManualSeniority(event.target.value)} placeholder="senior" /></label>
+            <label>Modalidade<input value={manualWorkMode} onChange={(event) => setManualWorkMode(event.target.value)} placeholder="remote" /></label>
+            <label>Idiomas, separados por vírgula<input value={manualLanguages} onChange={(event) => setManualLanguages(event.target.value)} placeholder="English" /></label>
+            <button type="submit">Salvar e avaliar vaga</button>
+          </form>
+        </section>
+      ) : tab === "queue" ? (
         <section className="workspace">
           <div className="queue-panel">
             <div className="section-heading">
@@ -285,7 +367,7 @@ function App() {
             {selectedJob ? <>
               <div className="detail-heading"><div><p className="eyebrow">Detalhe da vaga</p><h2>{selectedJob.title}</h2><p>{selectedJob.company}</p></div><a href={selectedJob.url} target="_blank">Abrir vaga ↗</a></div>
               <div className="metrics"><div><small>Score</small><strong>{selectedJob.score ?? '—'}</strong></div><div><small>Status</small><strong>{formatStatus(selectedJob.status)}</strong></div><div><small>Recomendação</small><strong>{selectedJob.recommendation ?? '—'}</strong></div></div>
-              <h3>Requisitos</h3><div className="chips">{selectedJob.required_skills.length > 0 ? selectedJob.required_skills.map((skill) => <span key={skill}>{skill}</span>) : <span>Não informado</span>}</div>
+              <h3>Requisitos</h3><div className="chips">{[...selectedJob.required_skills, ...selectedJob.required_technologies].length > 0 ? [...selectedJob.required_skills, ...selectedJob.required_technologies].map((skill) => <span key={skill}>{skill}</span>) : <span>Não informado</span>}</div>{selectedJob.responsibilities.length > 0 && <><h3>Responsabilidades</h3><ul>{selectedJob.responsibilities.map((item) => <li key={item}>{item}</li>)}</ul></>}
               {latestEvaluation && <><h3>Última avaliação</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
               {evaluations.length > 0 && <><h3>Histórico de avaliações</h3><div className="evaluation-history">{evaluations.map((evaluation) => <div key={evaluation.id}><strong>{evaluation.score} · {evaluation.recommendation}</strong><small>{new Date(evaluation.evaluated_at).toLocaleString()}</small><span>{evaluation.matched_skills.join(', ') || 'Sem skills identificadas'}</span></div>)}</div></>}
               <div className="actions">{selectedJob.status === 'discovered' && <button onClick={() => void evaluateJob()}>Avaliar vaga</button>}{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}</div>

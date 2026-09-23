@@ -11,6 +11,8 @@ class Job:
     url: str
     description: str = ""
     required_skills: list[str] = field(default_factory=list)
+    responsibilities: list[str] = field(default_factory=list)
+    source: str = "manual"
     required_technologies: list[str] = field(default_factory=list)
     desired_technologies: list[str] = field(default_factory=list)
     seniority: str | None = None
