@@ -102,6 +102,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const hasLoadedProfiles = useRef(false)
+  const selectedJobRequest = useRef(0)
 
   const loadQueue = useCallback(async () => {
     try {
@@ -143,18 +144,24 @@ function App() {
   }, [loadProfiles])
 
   async function selectJob(job: JobQueueItem) {
+    const requestId = ++selectedJobRequest.current
     setSelectedJob(job)
+    setEvaluations([])
+    setNotes([])
+    setNoteContent("")
+    setEditingNoteId(null)
     try {
       const [jobEvaluations, jobNotes] = await Promise.all([
         getJobEvaluations(job.id),
         getJobNotes(job.id),
       ])
+      if (requestId !== selectedJobRequest.current) return
       setEvaluations(jobEvaluations)
       setNotes(jobNotes)
-      setNoteContent("")
-      setEditingNoteId(null)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Erro ao carregar detalhes.')
+      if (requestId === selectedJobRequest.current) {
+        setMessage(error instanceof Error ? error.message : 'Erro ao carregar detalhes.')
+      }
     }
   }
 
