@@ -26,7 +26,23 @@ class CareerProfileRecord(Base):
     languages: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     required_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     desired_technologies: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
+    professional_base_id: Mapped[int | None] = mapped_column(ForeignKey("professional_bases.id"), nullable=True)
+    source_snapshot: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class ProfessionalBaseRecord(Base):
+    __tablename__ = "professional_bases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    resume_content: Mapped[str] = mapped_column(String, default="")
+    links: Mapped[list[str]] = mapped_column(JSON, default=list)
+    skills: Mapped[list[str]] = mapped_column(JSON, default=list)
+    experiences: Mapped[list[str]] = mapped_column(JSON, default=list)
+    education: Mapped[list[str]] = mapped_column(JSON, default=list)
+    languages: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
 
 class ResumeExtractionRecord(Base):

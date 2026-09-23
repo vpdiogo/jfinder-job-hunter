@@ -1,4 +1,4 @@
-import type { Evaluation, JobDescriptionExtraction, JobNote, JobQueueItem, JobStatus, Profile, ResumeExtraction } from './types'
+import type { Evaluation, JobDescriptionExtraction, JobNote, JobQueueItem, JobStatus, ProfessionalBase, Profile, ResumeExtraction } from './types'
 
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000'
 
@@ -123,5 +123,25 @@ export function updateJobNote(jobId: number, noteId: number, content: string): P
   return request<JobNote>(`/jobs/${jobId}/notes/${noteId}`, {
     method: 'PUT',
     body: JSON.stringify({ content }),
+  })
+}
+
+export function getProfessionalBase(): Promise<ProfessionalBase> {
+  return request<ProfessionalBase>('/professional-base')
+}
+
+export function saveProfessionalBase(data: Omit<ProfessionalBase, 'id' | 'created_at' | 'updated_at'>): Promise<ProfessionalBase> {
+  return request<ProfessionalBase>('/professional-base', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export function createApplicationProfileFromBase(
+  data: Omit<Profile, 'id' | 'created_at'>,
+): Promise<Profile> {
+  return request<Profile>('/professional-base/application-profiles', {
+    method: 'POST',
+    body: JSON.stringify(data),
   })
 }

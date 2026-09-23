@@ -44,6 +44,8 @@ def _upgrade_sqlite(engine: Engine) -> None:
             "languages": "JSON",
             "required_technologies": "JSON",
             "desired_technologies": "JSON",
+            "professional_base_id": "INTEGER",
+            "source_snapshot": "JSON",
         },
         "jobs": {
             "responsibilities": "JSON",
