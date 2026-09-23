@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   confirmResumeExtraction,
@@ -76,6 +76,7 @@ function App() {
   const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const hasLoadedProfiles = useRef(false)
 
   const loadQueue = useCallback(async () => {
     try {
@@ -93,11 +94,14 @@ function App() {
     try {
       const data = await getProfiles()
       setProfiles(data)
-      if (data.length && selectedProfileId === null) selectProfile(data[0])
+      if (!hasLoadedProfiles.current && data.length) {
+        selectProfile(data[0])
+      }
+      hasLoadedProfiles.current = true
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erro ao carregar perfis.')
     }
-  }, [selectedProfileId])
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

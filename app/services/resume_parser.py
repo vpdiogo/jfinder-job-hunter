@@ -18,7 +18,7 @@ _SECTION_NAMES = {
 }
 _ROLE_PATTERN = re.compile(
     r"\b(engineer|developer|desenvolvedor|analyst|analista|architect|arquiteto|"
-    r"manager|gerente|specialist|especialista)\b",
+    r"manager|gerente|specialist|especialista|tech lead|líder técnico|lider tecnico|lead)\b",
     re.IGNORECASE,
 )
 

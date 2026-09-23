@@ -29,3 +29,17 @@ def test_extracts_structured_resume_data() -> None:
     assert draft.education == [
         "Bacharelado em Ciência da Computação — Universidade Exemplo"
     ]
+
+
+def test_uses_tech_lead_experience_as_a_target_role() -> None:
+    draft = ResumeParser().extract(
+        """
+Experiência Profissional
+Tech Lead — Acme
+
+Competências
+Python
+"""
+    )
+
+    assert draft.target_titles == ["Tech Lead — Acme"]
