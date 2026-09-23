@@ -290,7 +290,7 @@ function App() {
         job: {
           title: manualTitle.trim(), company: manualCompany.trim(), url: manualUrl.trim(),
           description: manualDescription, required_skills: [],
-          responsibilities: toLines(manualResponsibilities), source: "linkedin",
+          responsibilities: toLines(manualResponsibilities), source: "manual",
           required_technologies: toList(manualRequiredTechnologies),
           desired_technologies: toList(manualDesiredTechnologies),
           seniority: manualSeniority || null, work_mode: manualWorkMode || null,
@@ -327,12 +327,12 @@ function App() {
 
       {tab === "new-job" ? (
         <section className="profile-panel">
-          <div className="section-heading"><div><p className="eyebrow">Estudar uma vaga</p><h2>Cadastre uma oportunidade do LinkedIn</h2></div></div>
+          <div className="section-heading"><div><p className="eyebrow">Estudar uma vaga</p><h2>Cadastre uma oportunidade para estudar</h2></div></div>
           <form onSubmit={(event) => void saveManualJob(event)}>
             <label>Perfil em foco<select required value={manualProfileId} onChange={(event) => setManualProfileId(event.target.value)}><option value="">Selecione o perfil</option>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
             <label>Cargo<input required value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} placeholder="Tech Lead" /></label>
             <label>Empresa<input required value={manualCompany} onChange={(event) => setManualCompany(event.target.value)} placeholder="Empresa" /></label>
-            <label>URL da vaga no LinkedIn<input required type="url" value={manualUrl} onChange={(event) => setManualUrl(event.target.value)} placeholder="https://www.linkedin.com/jobs/view/..." /></label>
+            <label>URL da vaga<input required type="url" value={manualUrl} onChange={(event) => setManualUrl(event.target.value)} placeholder="https://empresa.com/carreiras/vaga" /></label>
             <label>Descrição da vaga<textarea required value={manualDescription} onChange={(event) => setManualDescription(event.target.value)} placeholder="Cole aqui a descrição completa da vaga" /></label>
             <button type="button" className="secondary" onClick={() => void extractManualJob()}>Extrair dados da descrição</button>
             <p className="hint">Revise os dados extraídos antes de salvar.</p>
