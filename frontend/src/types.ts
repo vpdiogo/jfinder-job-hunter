@@ -99,3 +99,15 @@ export interface JobNote {
   created_at: string
   updated_at: string
 }
+
+export interface ProfessionalBase {
+  id: number
+  resume_content: string
+  links: string[]
+  skills: string[]
+  experiences: string[]
+  education: string[]
+  languages: string[]
+  created_at: string
+  updated_at: string
+}

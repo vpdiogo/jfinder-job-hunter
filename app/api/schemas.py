@@ -197,3 +197,21 @@ class StoredEvaluationResponse(EvaluationResponse):
     id: int
     profile_id: int
     evaluated_at: datetime
+
+class ProfessionalBaseInput(BaseModel):
+    resume_content: str = ""
+    links: list[str] = Field(default_factory=list)
+    skills: list[str] = Field(default_factory=list)
+    experiences: list[str] = Field(default_factory=list)
+    education: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+
+
+class ProfessionalBaseResponse(ProfessionalBaseInput):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApplicationProfileFromBaseRequest(CareerProfileInput):
+    pass

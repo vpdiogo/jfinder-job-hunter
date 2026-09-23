@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
-  confirmResumeExtraction,
+  createApplicationProfileFromBase,
   createJobNote,
   createManualJob,
   createProfile,
@@ -9,15 +9,17 @@ import {
   extractResume,
   getJobEvaluations,
   getJobNotes,
+  getProfessionalBase,
   evaluateSavedJob,
   getProfiles,
   getQueue,
   moveJob,
   updateJobNote,
   updateJobStatus,
+  saveProfessionalBase,
   updateProfile,
 } from './api'
-import type { Evaluation, JobNote, JobQueueItem, JobStatus, Profile, ResumeExtraction } from './types'
+import type { Evaluation, JobNote, JobQueueItem, JobStatus, ProfessionalBase, Profile } from './types'
 import './App.css'
 
 const statuses: JobStatus[] = [
@@ -60,9 +62,16 @@ function formatStatus(status: string): string {
 }
 
 function App() {
-  const [tab, setTab] = useState<'queue' | 'profile' | 'new-job'>('queue')
+  const [tab, setTab] = useState<'queue' | 'profile' | 'new-job' | 'base'>('queue')
   const [jobs, setJobs] = useState<JobQueueItem[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [professionalBase, setProfessionalBase] = useState<ProfessionalBase | null>(null)
+  const [baseResume, setBaseResume] = useState("" )
+  const [baseLinks, setBaseLinks] = useState("")
+  const [baseSkills, setBaseSkills] = useState("")
+  const [baseExperiences, setBaseExperiences] = useState("")
+  const [baseEducation, setBaseEducation] = useState("")
+  const [baseLanguages, setBaseLanguages] = useState("")
   const [selectedJob, setSelectedJob] = useState<JobQueueItem | null>(null)
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [notes, setNotes] = useState<JobNote[]>([])
@@ -84,10 +93,6 @@ function App() {
   const [languages, setLanguages] = useState('')
   const [requiredTechnologies, setRequiredTechnologies] = useState('')
   const [desiredTechnologies, setDesiredTechnologies] = useState('')
-  const [resumeContent, setResumeContent] = useState('')
-  const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(null)
-  const [experiences, setExperiences] = useState('')
-  const [education, setEducation] = useState('')
   const [manualTitle, setManualTitle] = useState('')
   const [manualCompany, setManualCompany] = useState('')
   const [manualUrl, setManualUrl] = useState('')
@@ -139,6 +144,15 @@ function App() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadProfiles()
+      void getProfessionalBase().then((base) => {
+        setProfessionalBase(base)
+        setBaseResume(base.resume_content)
+        setBaseLinks(base.links.join(", "))
+        setBaseSkills(base.skills.join(", "))
+        setBaseExperiences(base.experiences.join("\n"))
+        setBaseEducation(base.education.join("\n"))
+        setBaseLanguages(base.languages.join(", "))
+      }).catch(() => undefined)
     }, 0)
     return () => window.clearTimeout(timer)
   }, [loadProfiles])
@@ -241,41 +255,48 @@ function App() {
     }
   }
 
-  async function extractResumeText() {
-    try {
-      const extraction = await extractResume(resumeContent)
-      setResumeExtraction(extraction)
-      setSkills(extraction.draft.skills.join(', '))
-      setProfileName(extraction.draft.target_titles[0] ?? '')
-      setTargetTitles(extraction.draft.target_titles.join(', '))
-      setLanguages(extraction.draft.languages.join(', '))
-      setExperiences(extraction.draft.experiences.join('\n'))
-      setEducation(extraction.draft.education.join('\n'))
-      setMessage('Rascunho extraído. Revise os campos antes de salvar.')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Não foi possível extrair o currículo.')
-    }
-  }
-
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = profileData()
     try {
-      const profile = resumeExtraction
-        ? await confirmResumeExtraction(resumeExtraction.id, {
-            profile: data,
-            experiences: toLines(experiences),
-            education: toLines(education),
-          })
-        : selectedProfileId
+      const profile = selectedProfileId
         ? await updateProfile(selectedProfileId, data)
+        : professionalBase
+        ? await createApplicationProfileFromBase(data)
         : await createProfile(data)
       await loadProfiles()
       selectProfile(profile)
-      setResumeExtraction(null)
       setMessage('Perfil salvo.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível salvar o perfil.')
+    }
+  }
+
+  async function extractBaseResume() {
+    try {
+      const extraction = await extractResume(baseResume)
+      setBaseSkills(extraction.draft.skills.join(", "))
+      setBaseExperiences(extraction.draft.experiences.join("\n"))
+      setBaseEducation(extraction.draft.education.join("\n"))
+      setBaseLanguages(extraction.draft.languages.join(", "))
+      setMessage("Dados extraídos. Revise-os antes de salvar a base profissional.")
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível extrair o currículo.")
+    }
+  }
+
+  async function saveProfessionalBaseForm(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    try {
+      const base = await saveProfessionalBase({
+        resume_content: baseResume, links: toList(baseLinks), skills: toList(baseSkills),
+        experiences: toLines(baseExperiences), education: toLines(baseEducation),
+        languages: toList(baseLanguages),
+      })
+      setProfessionalBase(base)
+      setMessage("Base profissional salva.")
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível salvar a base profissional.")
     }
   }
 
@@ -358,13 +379,15 @@ function App() {
         </div>
         <nav aria-label="Navegação principal">
           <button className={tab === 'queue' ? 'active' : ''} onClick={() => setTab('queue')}>Vagas</button>
-          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Perfil</button><button className={tab === 'new-job' ? 'active' : ''} onClick={() => setTab('new-job')}>Cadastrar vaga</button>
+          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Perfis</button><button className={tab === 'base' ? 'active' : ''} onClick={() => setTab('base')}>Base profissional</button><button className={tab === 'new-job' ? 'active' : ''} onClick={() => setTab('new-job')}>Cadastrar vaga</button>
         </nav>
       </header>
 
       {message && <p className="message" role="status">{message}</p>}
 
-      {tab === "new-job" ? (
+      {tab === "base" ? (
+        <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Base profissional</p><h2>Seu histórico, antes dos recortes para candidaturas</h2></div></div><form onSubmit={(event) => void saveProfessionalBaseForm(event)}><label>Currículo em texto<textarea value={baseResume} onChange={(event) => setBaseResume(event.target.value)} placeholder="Cole aqui o currículo completo" /></label><button type="button" className="secondary" onClick={() => void extractBaseResume()}>Extrair dados do currículo</button><label>Links relevantes, separados por vírgula<input value={baseLinks} onChange={(event) => setBaseLinks(event.target.value)} placeholder="LinkedIn, GitHub, portfólio" /></label><label>Skills, separadas por vírgula<textarea value={baseSkills} onChange={(event) => setBaseSkills(event.target.value)} placeholder="Python, FastAPI, liderança técnica" /></label><label>Experiências, uma por linha<textarea value={baseExperiences} onChange={(event) => setBaseExperiences(event.target.value)} placeholder="Platform Engineer — Acme" /></label><label>Formação, uma por linha<textarea value={baseEducation} onChange={(event) => setBaseEducation(event.target.value)} placeholder="Ciência da Computação" /></label><label>Idiomas, separados por vírgula<input value={baseLanguages} onChange={(event) => setBaseLanguages(event.target.value)} placeholder="English, Portuguese" /></label><button type="submit">Salvar base profissional</button></form></section>
+      ) : tab === "new-job" ? (
         <section className="profile-panel">
           <div className="section-heading"><div><p className="eyebrow">Estudar uma vaga</p><h2>Cadastre uma oportunidade para estudar</h2></div></div>
           <form onSubmit={(event) => void saveManualJob(event)}>
@@ -415,7 +438,7 @@ function App() {
             </> : <p className="empty">Selecione uma vaga para ver seus detalhes e ações.</p>}
           </aside>
         </section>
-      ) : <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Perfil profissional</p><h2>Base para suas avaliações</h2></div><button className="secondary" onClick={() => { setSelectedProfileId(null); setProfileName(''); setSkills(''); setTargetTitles(''); setDesiredSeniority(''); setWorkModes(''); setLocations(''); setTimezones(''); setSalaryMin(''); setSalaryMax(''); setLanguages(''); setRequiredTechnologies(''); setDesiredTechnologies(''); setResumeExtraction(null); setResumeContent(''); setExperiences(''); setEducation('') }}>Novo perfil</button></div><div className="resume-import"><label>Currículo em texto<textarea value={resumeContent} onChange={(event) => setResumeContent(event.target.value)} placeholder="Cole aqui o conteúdo do currículo" /></label><button type="button" className="secondary" onClick={() => void extractResumeText()}>Extrair rascunho</button>{resumeExtraction && <div className="resume-draft"><strong>Rascunho pronto para revisão</strong><label>Experiências extraídas<textarea value={experiences} onChange={(event) => setExperiences(event.target.value)} placeholder="Uma experiência por linha" /></label><label>Formação extraída<textarea value={education} onChange={(event) => setEducation(event.target.value)} placeholder="Uma formação por linha" /></label><small>Os campos do perfil foram preenchidos; revise-os e salve para confirmar.</small></div>}</div><div className="profile-layout"><div className="profile-list">{profiles.map((profile) => <button key={profile.id} className={selectedProfileId === profile.id ? 'selected' : ''} onClick={() => selectProfile(profile)}><strong>{profile.name}</strong><small>{profile.target_titles.join(', ') || 'Sem cargos definidos'}</small></button>)}</div><form onSubmit={(event) => void saveProfile(event)}><label>Nome do perfil<input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Tech Lead — Plataforma" /></label><label>Skills separadas por vírgula<textarea value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, FastAPI, SQLAlchemy" /></label><label>Cargos-alvo separados por vírgula<textarea value={targetTitles} onChange={(event) => setTargetTitles(event.target.value)} placeholder="Backend Engineer, Platform Engineer" /></label><label>Senioridade desejada<input value={desiredSeniority} onChange={(event) => setDesiredSeniority(event.target.value)} placeholder="Senior" /></label><label>Modalidades aceitas, separadas por vírgula<input value={workModes} onChange={(event) => setWorkModes(event.target.value)} placeholder="remote, hybrid" /></label><label>Localizações aceitas, separadas por vírgula<input value={locations} onChange={(event) => setLocations(event.target.value)} placeholder="Brazil, São Paulo" /></label><label>Fusos aceitos, separados por vírgula<input value={timezones} onChange={(event) => setTimezones(event.target.value)} placeholder="America/Sao_Paulo" /></label><label>Faixa salarial mínima<input type="number" min="0" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)} /></label><label>Faixa salarial máxima<input type="number" min="0" value={salaryMax} onChange={(event) => setSalaryMax(event.target.value)} /></label><label>Idiomas, separados por vírgula<input value={languages} onChange={(event) => setLanguages(event.target.value)} placeholder="English, Portuguese" /></label><label>Tecnologias obrigatórias, separadas por vírgula<textarea value={requiredTechnologies} onChange={(event) => setRequiredTechnologies(event.target.value)} placeholder="Python, FastAPI" /></label><label>Tecnologias desejáveis, separadas por vírgula<textarea value={desiredTechnologies} onChange={(event) => setDesiredTechnologies(event.target.value)} placeholder="Docker, Kubernetes" /></label><button type="submit">Salvar perfil</button></form></div></section>}
+      ) : <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Perfil profissional</p><h2>Base para suas avaliações</h2></div><button className="secondary" onClick={() => { setSelectedProfileId(null); setProfileName(''); setSkills(''); setTargetTitles(''); setDesiredSeniority(''); setWorkModes(''); setLocations(''); setTimezones(''); setSalaryMin(''); setSalaryMax(''); setLanguages(''); setRequiredTechnologies(''); setDesiredTechnologies('') }}>Novo perfil</button></div><p className="hint">Use a Base profissional para currículo e histórico; este formulário define o recorte para a candidatura.</p><div className="profile-layout"><div className="profile-list">{profiles.map((profile) => <button key={profile.id} className={selectedProfileId === profile.id ? 'selected' : ''} onClick={() => selectProfile(profile)}><strong>{profile.name}</strong><small>{profile.target_titles.join(', ') || 'Sem cargos definidos'}</small></button>)}</div><form onSubmit={(event) => void saveProfile(event)}><label>Nome do perfil<input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Tech Lead — Plataforma" /></label><label>Skills separadas por vírgula<textarea value={skills} onChange={(event) => setSkills(event.target.value)} placeholder="Python, FastAPI, SQLAlchemy" /></label><label>Cargos-alvo separados por vírgula<textarea value={targetTitles} onChange={(event) => setTargetTitles(event.target.value)} placeholder="Backend Engineer, Platform Engineer" /></label><label>Senioridade desejada<input value={desiredSeniority} onChange={(event) => setDesiredSeniority(event.target.value)} placeholder="Senior" /></label><label>Modalidades aceitas, separadas por vírgula<input value={workModes} onChange={(event) => setWorkModes(event.target.value)} placeholder="remote, hybrid" /></label><label>Localizações aceitas, separadas por vírgula<input value={locations} onChange={(event) => setLocations(event.target.value)} placeholder="Brazil, São Paulo" /></label><label>Fusos aceitos, separados por vírgula<input value={timezones} onChange={(event) => setTimezones(event.target.value)} placeholder="America/Sao_Paulo" /></label><label>Faixa salarial mínima<input type="number" min="0" value={salaryMin} onChange={(event) => setSalaryMin(event.target.value)} /></label><label>Faixa salarial máxima<input type="number" min="0" value={salaryMax} onChange={(event) => setSalaryMax(event.target.value)} /></label><label>Idiomas, separados por vírgula<input value={languages} onChange={(event) => setLanguages(event.target.value)} placeholder="English, Portuguese" /></label><label>Tecnologias obrigatórias, separadas por vírgula<textarea value={requiredTechnologies} onChange={(event) => setRequiredTechnologies(event.target.value)} placeholder="Python, FastAPI" /></label><label>Tecnologias desejáveis, separadas por vírgula<textarea value={desiredTechnologies} onChange={(event) => setDesiredTechnologies(event.target.value)} placeholder="Docker, Kubernetes" /></label><button type="submit">Salvar perfil</button></form></div></section>}
     </main>
   )
 }
