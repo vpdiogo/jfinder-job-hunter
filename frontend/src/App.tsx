@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createApplicationProfileFromBase,
   createJobNote,
+  deleteJobNote,
   createManualJob,
   extractJobDescription,
   extractResume,
@@ -13,6 +14,7 @@ import {
   getProfiles,
   getQueue,
   moveJob,
+  updateJob,
   updateJobNote,
   updateJobStatus,
   saveProfessionalBase,
@@ -136,6 +138,7 @@ function App() {
   const [manualSeniority, setManualSeniority] = useState('')
   const [manualWorkMode, setManualWorkMode] = useState('')
   const [manualLanguages, setManualLanguages] = useState('')
+  const [editingJob, setEditingJob] = useState<JobQueueItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [messageVersion, setMessageVersion] = useState(0)
@@ -372,13 +375,49 @@ function App() {
     }
   }
 
+  function startEditingJob() {
+    if (!selectedJob) return
+    setEditingJob(selectedJob)
+    setManualProfileId(selectedJob.focus_profile_id?.toString() ?? "")
+    setManualTitle(selectedJob.title)
+    setManualCompany(selectedJob.company)
+    setManualUrl(selectedJob.url)
+    setManualDescription(selectedJob.description)
+    setManualResponsibilities(selectedJob.responsibilities.join("\n"))
+    setManualRequiredTechnologies(selectedJob.required_technologies.join(", "))
+    setManualDesiredTechnologies(selectedJob.desired_technologies.join(", "))
+    setManualSeniority(selectedJob.seniority ?? "")
+    setManualWorkMode(selectedJob.work_mode ?? "")
+    setManualLanguages(selectedJob.languages.join(", "))
+    setTab("new-job")
+  }
+
   async function saveManualJob(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!manualProfileId) {
+    if (!editingJob && !manualProfileId) {
       showMessage("Selecione o perfil em foco para esta vaga.")
       return
     }
     try {
+      if (editingJob) {
+        const job = await updateJob(editingJob.id, {
+          title: manualTitle.trim(), company: manualCompany.trim(), url: manualUrl.trim(),
+          description: manualDescription, required_skills: editingJob.required_skills,
+          responsibilities: toLines(manualResponsibilities), source: editingJob.source,
+          required_technologies: toList(manualRequiredTechnologies),
+          desired_technologies: toList(manualDesiredTechnologies),
+          seniority: manualSeniority || null, work_mode: manualWorkMode || null,
+          location: editingJob.location, timezone: editingJob.timezone,
+          salary_min: editingJob.salary_min, salary_max: editingJob.salary_max,
+          languages: toList(manualLanguages),
+        })
+        await loadQueue()
+        await selectJob(job)
+        setEditingJob(null)
+        setTab("queue")
+        showMessage(job.focus_profile_id ? "Vaga atualizada e reavaliada." : "Vaga atualizada.")
+        return
+      }
       const job = await createManualJob({
         profile_id: Number(manualProfileId),
         job: {
@@ -398,7 +437,7 @@ function App() {
       setTab("queue")
       showMessage("Vaga cadastrada e avaliada com o perfil selecionado.")
     } catch (error) {
-      showMessage(error instanceof Error ? error.message : "Não foi possível cadastrar a vaga.")
+      showMessage(error instanceof Error ? error.message : (editingJob ? "Não foi possível atualizar a vaga." : "Não foi possível cadastrar a vaga."))
     }
   }
 
@@ -420,6 +459,21 @@ function App() {
     }
   }
 
+  async function removeJobNote(note: JobNote) {
+    if (!selectedJob || !window.confirm("Remover esta anotação?")) return
+    try {
+      await deleteJobNote(selectedJob.id, note.id)
+      setNotes((current) => current.filter((item) => item.id !== note.id))
+      if (editingNoteId === note.id) {
+        setEditingNoteId(null)
+        setNoteContent("")
+      }
+      showMessage("Anotação removida.")
+    } catch (error) {
+      showMessage(error instanceof Error ? error.message : "Não foi possível remover a anotação.")
+    }
+  }
+
   const latestEvaluation = evaluations[0]
   const focusProfile = profiles.find((profile) => profile.id === selectedJob?.focus_profile_id)
 
@@ -432,7 +486,7 @@ function App() {
         </div>
         <nav aria-label="Navegação principal">
           <button className={tab === 'queue' ? 'active' : ''} onClick={() => setTab('queue')}>Vagas</button>
-          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Perfis</button><button className={tab === 'base' ? 'active' : ''} onClick={() => setTab('base')}>Base profissional</button><button className={tab === 'new-job' ? 'active' : ''} onClick={() => setTab('new-job')}>Cadastrar vaga</button>
+          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Perfis</button><button className={tab === 'base' ? 'active' : ''} onClick={() => setTab('base')}>Base profissional</button><button className={tab === 'new-job' ? 'active' : ''} onClick={() => { setEditingJob(null); setTab('new-job') }}>Cadastrar vaga</button>
         </nav>
       </header>
 
@@ -442,9 +496,9 @@ function App() {
         <section className="profile-panel"><div className="section-heading"><div><p className="eyebrow">Base profissional</p><h2>Seu histórico, antes dos recortes para candidaturas</h2></div></div><form onSubmit={(event) => void saveProfessionalBaseForm(event)}><label>Currículo em texto<textarea value={baseResume} onChange={(event) => setBaseResume(event.target.value)} placeholder="Cole aqui o currículo completo" /></label><button type="button" className="secondary" onClick={() => void extractBaseResume()}>Extrair dados do currículo</button><label>Links relevantes, separados por vírgula<input value={baseLinks} onChange={(event) => setBaseLinks(event.target.value)} placeholder="LinkedIn, GitHub, portfólio" /></label><label>Skills, separadas por vírgula<textarea value={baseSkills} onChange={(event) => setBaseSkills(event.target.value)} placeholder="Python, FastAPI, liderança técnica" /></label><label>Experiências, uma por linha<textarea value={baseExperiences} onChange={(event) => setBaseExperiences(event.target.value)} placeholder="Platform Engineer — Acme" /></label><label>Formação, uma por linha<textarea value={baseEducation} onChange={(event) => setBaseEducation(event.target.value)} placeholder="Ciência da Computação" /></label><label>Idiomas, separados por vírgula<input value={baseLanguages} onChange={(event) => setBaseLanguages(event.target.value)} placeholder="English, Portuguese" /></label><button type="submit">Salvar base profissional</button></form></section>
       ) : tab === "new-job" ? (
         <section className="profile-panel">
-          <div className="section-heading"><div><p className="eyebrow">Estudar uma vaga</p><h2>Cadastre uma oportunidade para estudar</h2></div></div>
+          <div className="section-heading"><div><p className="eyebrow">{editingJob ? "Editar vaga" : "Estudar uma vaga"}</p><h2>{editingJob ? "Atualize as informações da oportunidade" : "Cadastre uma oportunidade para estudar"}</h2></div></div>
           <form onSubmit={(event) => void saveManualJob(event)}>
-            <label>Perfil em foco<select required value={manualProfileId} onChange={(event) => setManualProfileId(event.target.value)}><option value="">Selecione o perfil</option>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+            <label>Perfil em foco<select required disabled={Boolean(editingJob)} value={manualProfileId} onChange={(event) => setManualProfileId(event.target.value)}><option value="">Selecione o perfil</option>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
             <label>Cargo<input required value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} placeholder="Tech Lead" /></label>
             <label>Empresa<input required value={manualCompany} onChange={(event) => setManualCompany(event.target.value)} placeholder="Empresa" /></label>
             <label>URL da vaga<input required type="url" value={manualUrl} onChange={(event) => setManualUrl(event.target.value)} placeholder="https://empresa.com/carreiras/vaga" /></label>
@@ -457,7 +511,7 @@ function App() {
             <label>Senioridade<input value={manualSeniority} onChange={(event) => setManualSeniority(event.target.value)} placeholder="senior" /></label>
             <label>Modalidade<input value={manualWorkMode} onChange={(event) => setManualWorkMode(event.target.value)} placeholder="remote" /></label>
             <label>Idiomas, separados por vírgula<input value={manualLanguages} onChange={(event) => setManualLanguages(event.target.value)} placeholder="English" /></label>
-            <button type="submit">Salvar e avaliar vaga</button>
+            <button type="submit">{editingJob ? "Salvar alterações e reavaliar" : "Salvar e avaliar vaga"}</button>{editingJob && <button type="button" className="secondary" onClick={() => { setEditingJob(null); setTab("queue") }}>Cancelar</button>}
           </form>
         </section>
       ) : tab === "queue" ? (
@@ -485,9 +539,9 @@ function App() {
               <h3>Requisitos</h3><div className="chips">{[...selectedJob.required_skills, ...selectedJob.required_technologies].length > 0 ? [...selectedJob.required_skills, ...selectedJob.required_technologies].map((skill) => <span key={skill}>{skill}</span>) : <span>Não informado</span>}</div>{selectedJob.responsibilities.length > 0 && <><h3>Responsabilidades</h3><ul>{selectedJob.responsibilities.map((item) => <li key={item}>{item}</li>)}</ul></>}
               {selectedJob.desired_technologies.length > 0 && <><h3>Tecnologias desejáveis</h3><div className="chips">{selectedJob.desired_technologies.map((technology) => <span key={technology}>{technology}</span>)}</div></>}
               {latestEvaluation && <><h3>Última avaliação</h3><ul>{latestEvaluation.reasons.map((reason) => <li key={reason}>{formatEvaluationReason(reason)}</li>)}</ul>{latestEvaluation.missing_requirements.length > 0 && <p className="warning">Lacunas: {latestEvaluation.missing_requirements.join(', ')}</p>}</>}
-              <h3>Anotações</h3><form className="note-form" onSubmit={(event) => void saveJobNote(event)}><textarea value={noteContent} onChange={(event) => setNoteContent(event.target.value)} placeholder="Registre observações, perguntas e próximos passos" /><div className="actions"><button type="submit">{editingNoteId ? "Salvar alteração" : "Adicionar anotação"}</button>{editingNoteId && <button type="button" className="secondary" onClick={() => { setEditingNoteId(null); setNoteContent("") }}>Cancelar</button>}</div></form>{notes.length > 0 && <div className="note-list">{notes.map((note) => <button key={note.id} type="button" onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content) }}><span>{note.content}</span><small>Atualizada em {new Date(note.updated_at).toLocaleString()}</small></button>)}</div>}
+              <h3>Anotações</h3><form className="note-form" onSubmit={(event) => void saveJobNote(event)}><textarea value={noteContent} onChange={(event) => setNoteContent(event.target.value)} placeholder="Registre observações, perguntas e próximos passos" /><div className="actions"><button type="submit">{editingNoteId ? "Salvar alteração" : "Adicionar anotação"}</button>{editingNoteId && <button type="button" className="secondary" onClick={() => { setEditingNoteId(null); setNoteContent("") }}>Cancelar</button>}</div></form>{notes.length > 0 && <div className="note-list">{notes.map((note) => <article key={note.id}><button type="button" className="note-edit" onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content) }}><span>{note.content}</span><small>Atualizada em {new Date(note.updated_at).toLocaleString()}</small></button><button type="button" className="note-delete" onClick={() => void removeJobNote(note)}>Remover</button></article>)}</div>}
               {evaluations.length > 0 && <><h3>Histórico de avaliações</h3><div className="evaluation-history">{evaluations.map((evaluation) => <div key={evaluation.id}><strong>{evaluation.score} · {formatRecommendation(evaluation.recommendation)}</strong><small>{new Date(evaluation.evaluated_at).toLocaleString()}</small><span>{evaluation.matched_skills.join(', ') || 'Sem skills identificadas'}</span></div>)}</div></>}
-              <div className="actions">{selectedJob.status === 'discovered' && <button onClick={() => void evaluateJob()}>Avaliar vaga</button>}{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}</div>
+              <div className="actions">{selectedJob.status === 'discovered' && <button onClick={() => void evaluateJob()}>Avaliar vaga</button>}{selectedJob.status === 'evaluated' && <button onClick={() => void changeStatus('interest')}>Marcar interesse</button>}{selectedJob.status === 'interested' && <button onClick={() => void changeStatus('apply')}>Registrar candidatura</button>}{nextStatuses[selectedJob.status].length > 0 && <label>Próxima etapa<select value="" onChange={(event) => event.target.value && void changeStatus(event.target.value as JobStatus)}><option value="">Selecionar</option>{nextStatuses[selectedJob.status].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></label>}<button className="secondary" onClick={startEditingJob}>Editar vaga</button></div>
             </> : <p className="empty">Selecione uma vaga para ver seus detalhes e ações.</p>}
           </aside>
         </section>

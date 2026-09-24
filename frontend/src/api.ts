@@ -13,7 +13,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const payload = await response.json().catch(() => null)
     throw new Error(payload?.detail ?? 'Não foi possível concluir a ação.')
   }
-  return response.json() as Promise<T>
+  return response.status === 204 ? (undefined as T) : response.json() as Promise<T>
 }
 
 export function getQueue(filters: {
@@ -108,6 +108,16 @@ export function createManualJob(data: {
   })
 }
 
+export function updateJob(
+  jobId: number,
+  data: Omit<JobQueueItem, "id" | "created_at" | "status" | "score" | "recommendation" | "applied_at" | "focus_profile_id">,
+): Promise<JobQueueItem> {
+  return request<JobQueueItem>("/jobs/" + jobId, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  })
+}
+
 export function getJobNotes(jobId: number): Promise<JobNote[]> {
   return request<JobNote[]>(`/jobs/${jobId}/notes`)
 }
@@ -124,6 +134,10 @@ export function updateJobNote(jobId: number, noteId: number, content: string): P
     method: 'PUT',
     body: JSON.stringify({ content }),
   })
+}
+
+export function deleteJobNote(jobId: number, noteId: number): Promise<void> {
+  return request<void>("/jobs/" + jobId + "/notes/" + noteId, { method: "DELETE" })
 }
 
 export function getProfessionalBase(): Promise<ProfessionalBase> {

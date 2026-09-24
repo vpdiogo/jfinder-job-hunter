@@ -51,3 +51,16 @@ def test_rejects_note_for_unknown_or_different_job(client: TestClient) -> None:
         f"/jobs/{job_id + 1}/notes/{created['id']}",
         json={"content": "Outra nota."},
     ).status_code == 404
+
+
+def test_deletes_job_note(client: TestClient) -> None:
+    job_id = create_job(client)
+    note = client.post(
+        f"/jobs/{job_id}/notes", json={"content": "Anotação removível."}
+    ).json()
+
+    deleted = client.delete(f"/jobs/{job_id}/notes/{note['id']}")
+
+    assert deleted.status_code == 204
+    assert client.get(f"/jobs/{job_id}/notes").json() == []
+    assert client.delete(f"/jobs/{job_id}/notes/{note['id']}").status_code == 404

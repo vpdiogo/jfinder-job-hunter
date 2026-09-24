@@ -108,3 +108,49 @@ Desejáveis:
     assert response.status_code == 200
     assert response.json()["required_technologies"] == ["Python"]
     assert response.json()["desired_technologies"] == ["AWS", "Terraform"]
+
+
+def test_updates_manual_job_and_stores_a_fresh_evaluation(client: TestClient) -> None:
+    profile_id = create_profile(client)
+    created = client.post(
+        "/jobs/manual",
+        json={
+            "profile_id": profile_id,
+            "job": {
+                "title": "Backend Engineer",
+                "company": "Acme",
+                "url": "https://example.com/jobs/backend",
+                "required_technologies": ["Python"],
+            },
+        },
+    ).json()
+
+    updated = client.put(
+        f"/jobs/{created['id']}",
+        json={
+            "title": "Senior Backend Engineer",
+            "company": "Globex",
+            "url": "https://example.com/jobs/backend",
+            "description": "Detalhes confirmados com a recrutadora.",
+            "required_skills": [],
+            "responsibilities": ["Liderar o time"],
+            "source": "manual",
+            "required_technologies": ["Python", "FastAPI"],
+            "desired_technologies": ["Kubernetes"],
+            "seniority": "senior",
+            "work_mode": "remote",
+            "location": None,
+            "timezone": None,
+            "salary_min": None,
+            "salary_max": None,
+            "languages": ["English"],
+        },
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Senior Backend Engineer"
+    assert updated.json()["company"] == "Globex"
+    assert updated.json()["responsibilities"] == ["Liderar o time"]
+    evaluations = client.get(f"/jobs/{created['id']}/evaluations").json()
+    assert len(evaluations) == 2
+    assert evaluations[0]["profile_id"] == profile_id
